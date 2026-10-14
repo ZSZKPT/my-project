@@ -39,3 +39,6 @@ class DesktopTest(unittest.TestCase):
             self.assertTrue(all(r['*申报价格\n(店铺币种)']==39 for r in data))
             self.assertEqual(data[-1]['SKU货号'],'YQ-TEST-XXL')
             self.assertEqual(s.max_column,51)
+            self.assertTrue(all(r['外包装形状']=='长方体' for r in data))
+            self.assertTrue(all(r['外包装类型']=='软包装+软物' for r in data))
+            self.assertTrue(all(r['外包装图片']=='https://img.cdnfe.com/product/open/ad7a1f90a1b744c08ed8a93b5c0fd982-goods.jpeg' for r in data))

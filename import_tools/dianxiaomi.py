@@ -52,7 +52,7 @@ def build_rows(config, products):
                 if not math.isfinite(value) or value <= 0:
                     raise ValueError(f'{sku}/{size}: {key} 必须为正数')
                 values[key] = value
-            rows.append({
+            row = {
                 '*产品标题': title, '英文标题': config.get('english_title', ''),
                 '产品描述': config.get('description', ''), '产品货号': sku,
                 '*变种属性名称一': '颜色', '*变种属性值一': config.get('color', '混合色'),
@@ -62,7 +62,11 @@ def build_rows(config, products):
                 '*长（cm）': values['length_cm'], '*宽（cm）': values['width_cm'], '*高（cm）': values['height_cm'],
                 '*重量（g）': values['weight_g'], '*轮播图': '\n'.join(carousel), '*产品素材图': material,
                 '产地': config.get('origin', '')
-            })
+            }
+            for key, value in config.get('extra_fields', {}).items():
+                if key not in row:
+                    row[key] = value
+            rows.append(row)
     if not rows:
         raise ValueError('商品表为空')
     return rows

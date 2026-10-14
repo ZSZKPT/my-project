@@ -80,4 +80,8 @@ def load_profile(path):
     sizes=[r['变种属性值二'] for r in rows]
     if len(set(sizes))!=len(sizes):
         raise ValueError('模板中有重复尺码，请只保留一个颜色的商品')
-    return {'title':'女士圆领短袖2件套{print_name}印花圆领T恤+短裤','description':rows[0].get('产品描述') or '', 'color':rows[0].get('变种属性值一') or '混合色', 'origin':rows[0].get('产地') or '', 'variants':[{'size':r['变种属性值二'],'length_cm':float(r['长']),'width_cm':float(r['宽']),'height_cm':float(r['高']),'weight_g':float(r['重量'])} for r in rows]}
+    profile = {'title':'女士圆领短袖2件套{print_name}印花圆领T恤+短裤','description':rows[0].get('产品描述') or '', 'color':rows[0].get('变种属性值一') or '混合色', 'origin':rows[0].get('产地') or '', 'variants':[{'size':r['变种属性值二'],'length_cm':float(r['长']),'width_cm':float(r['宽']),'height_cm':float(r['高']),'weight_g':float(r['重量'])} for r in rows]}
+    # Carry only optional fields supported by the creation import format.
+    optional = ['外包装形状','外包装类型','外包装图片','建议售价（USD）','净重（g）','是否定制品','定制品类型','一级工艺','二级工艺','产品视频url','描述视频url','产品说明书','说明书语种','SKU分类类型','SKU分类数量','SKU分类单位','是否独立包装','单品净含量','单品净含量单位','内计共含件数','是否同品','总净含量','总净含量单位','是否敏感属性','敏感属性值','储电容量','刀具长度','刀刃角度','液体容量','来源URL']
+    profile['extra_fields'] = {key: rows[0][key] for key in optional if rows[0].get(key) not in (None, '')}
+    return profile

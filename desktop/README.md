@@ -32,3 +32,5 @@ EXE 内置用户提供的短袖短裤套装模板和店小秘官方创建表头�
 输出 Excel 使用51列创建模板，不能自动载入69列导出表中的类目属性和平台ID。商品导出模板的属性保存在内置参考表中，仅供核对。需要完整平台套版仍需店小秘支持的属性导入方式。
 
 Windows 打包产物是 `TemuImportTool-Windows.zip`，包含 EXE 与说明；打开 EXE不需 Python。源码下载需在 Windows 运行 `windows/build-exe.cmd` 才会产生 EXE。已测试图片处理和表格生成，真实 ImgBB 上传、Windows GUI运行和店小秘导入尚未验证。
+
+默认套装模板已固定外包装形状为“长方体”、类型为“软包装+软物”，所有SKU共用外包装图片链接：https://img.cdnfe.com/product/open/ad7a1f90a1b744c08ed8a93b5c0fd982-goods.jpeg 。该链接不会随印花图片替换。模板中创建表支持的已填可选字段也会带入，未提供的参数保持空白，不猜测填写。固定链接实际可访问性及包装是否适用于商品需用户核对。
