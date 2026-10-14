@@ -18,3 +18,24 @@ class DesktopTest(unittest.TestCase):
             self.assertEqual(before,{p.name:p.read_bytes() for p in source.iterdir()})
             self.assertEqual(len(ready['carousel']),5)
             with self.assertRaises(FileExistsError):prepare(groups[0],root/'out')
+
+    def test_bundled_suit_to_excel(self):
+        from desktop.core import load_profile
+        from import_tools.dianxiaomi import export
+        from openpyxl import load_workbook
+        assets=Path(__file__).resolve().parents[1]/'desktop'/'assets'
+        config=load_profile(assets/'运动短袖短裤套装.xlsx')
+        self.assertEqual([v['size'] for v in config['variants']],['S','M','L','XL','XXL'])
+        for v in config['variants']:
+            self.assertEqual(v['weight_g'],200)
+            v['price']=39
+        products=[{'sku':'YQ-TEST','print_name':'纽约字母','carousel_urls':'https://example.com/front.jpg','material_url':'https://example.com/material.jpg'}]
+        with tempfile.TemporaryDirectory() as d:
+            out=Path(d)/'import.xlsx'
+            self.assertEqual(export(assets/'店小秘创建商品模板.xlsx',config,products,out),5)
+            w=load_workbook(out);s=w['导入模板'];headers=[c.value for c in s[1]]
+            data=[dict(zip(headers,row)) for row in s.iter_rows(min_row=2,values_only=True)]
+            self.assertEqual(data[0]['*产品标题'],'女士圆领短袖2件套纽约字母印花圆领T恤+短裤')
+            self.assertTrue(all(r['*申报价格\n(店铺币种)']==39 for r in data))
+            self.assertEqual(data[-1]['SKU货号'],'YQ-TEST-XXL')
+            self.assertEqual(s.max_column,51)

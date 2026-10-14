@@ -15,6 +15,9 @@ from desktop.core import discover, prepare, upload_imgbb, load_profile
 from import_tools.dianxiaomi import export
 
 
+ASSETS = Path(getattr(sys, '_MEIPASS', Path(__file__).resolve().parent)) / 'assets'
+
+
 class App:
     def __init__(self, window):
         self.window=window
@@ -22,9 +25,9 @@ class App:
         window.geometry('1000x800')
         self.events=queue.Queue(); self.groups=[]; self.names=[]; self.busy=False
         self.variables={k:tk.StringVar(value=v) for k,v in {
-            'source':'','output':'','profile':'','template':'','price':'',
+            'source':'','output':'','profile':str(ASSETS/'运动短袖短裤套装.xlsx'),'template':str(ASSETS/'店小秘创建商品模板.xlsx'),'price':'',
             'title':'女士圆领短袖2件套{print_name}印花圆领T恤+短裤',
-            'mode':'先处理图片，手动补链接','key':'','links':'','size':'1000'}.items()}
+            'mode':'ImgBB 自动上传','key':'','links':'','size':'1000'}.items()}
         frame=ttk.Frame(window,padding=16);frame.pack(fill='both',expand=True)
         ttk.Label(frame,text='选择图片 → 填印花名和申报价 → 处理图片 / 上传 → 导出 Excel',font=('',13,'bold')).pack(anchor='w')
         self.controls=[]
