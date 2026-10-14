@@ -26,16 +26,22 @@ def page_kind(url):
 def main():
     parser = argparse.ArgumentParser(description='Open a dedicated local Temu browser. No automated submission.')
     parser.add_argument('--url', default=DEFAULT_URL)
+    parser.add_argument('--browser', choices=['chrome', 'chromium'], default='chrome', help='Use installed Google Chrome by default.')
     args = parser.parse_args()
     url = validate_url(args.url)
     from playwright.sync_api import sync_playwright
-    profile = ROOT / 'data' / 'browser-profile'
+    profile = ROOT / 'data' / ('chrome-profile' if args.browser == 'chrome' else 'browser-profile')
     profile.mkdir(parents=True, exist_ok=True)
     print('Login manually in the browser. Profile stays on this computer.')
     print('No copying, filling, saving, or publishing is performed by this launcher.')
     print('Close the browser or press Ctrl+C to stop. Do not run two launchers at once.')
     with sync_playwright() as playwright:
-        context = playwright.chromium.launch_persistent_context(str(profile), headless=False, viewport=None, args=['--start-maximized'])
+        try:
+            context = playwright.chromium.launch_persistent_context(
+                str(profile), channel='chrome' if args.browser == 'chrome' else None,
+                headless=False, viewport=None, args=['--start-maximized'])
+        except Exception as error:
+            raise RuntimeError('Could not open browser. Ensure Google Chrome is installed and close other tool windows using this profile. No changes were made to your everyday Chrome profile.') from error
         try:
             page = context.pages[0] if context.pages else context.new_page()
             page.goto(url, wait_until='domcontentloaded', timeout=60000)

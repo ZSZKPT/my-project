@@ -6,7 +6,5 @@ if (!(Test-Path '.venv\Scripts\python.exe')) {
 }
 & '.venv\Scripts\python.exe' -m pip install -r windows\requirements.txt
 if ($LASTEXITCODE -ne 0) { throw 'Dependency installation failed.' }
-& '.venv\Scripts\python.exe' -m playwright install chromium
-if ($LASTEXITCODE -ne 0) { throw 'Browser installation failed.' }
 & '.venv\Scripts\python.exe' windows\browser.py
 if ($LASTEXITCODE -ne 0) { throw 'Browser startup failed.' }
