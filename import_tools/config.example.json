@@ -1,0 +1,10 @@
+{
+  "title": "女士圆领{print_name}印花套装 {sku}",
+  "description": "请替换为真实共用商品详情",
+  "color": "混合色",
+  "origin": "中国-江西省",
+  "variants": [
+    {"size": "S", "price": null, "length_cm": null, "width_cm": null, "height_cm": null, "weight_g": null},
+    {"size": "M", "price": null, "length_cm": null, "width_cm": null, "height_cm": null, "weight_g": null}
+  ]
+}
