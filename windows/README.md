@@ -31,3 +31,13 @@ py -3 -m venv .venv
 更新项目后，关闭之前启动的工具浏览器，再运行 `windows\start-browser.cmd`。新版本默认使用安装的 Google Chrome，创建独立的 `data\chrome-profile`，不会读取、复制或修改日常 Chrome 的登录目录。请在新窗口手动登录。
 
 这只是更换浏览器发行版，不能保证消除 Temu 的账号或风控限制，也不会隐藏自动化标识。如果仍提示账号异常，停止反复登录并联系官方客服。需要使用 Chromium 时，先运行 `python -m playwright install chromium`，再给启动器添加 `--browser chromium`。
+
+## 本地图片排序和素材图
+
+解压用户图片压缩包后，在 PowerShell 中执行（输出目录必须不存在）：
+
+```powershell
+.\windows\prepare-images.ps1 -Source "C:\图片\新建文件夹 (51)" -Output "C:\图片\整理结果" -Size 800
+```
+
+支持 JPG/PNG，按货号目录处理。含“前”的文件排在前面，同组按名称排序；原文件复制后增加序号。第一张图居中裁成正方形，再缩放为指定大小。原文件不会覆盖。裁切可能去掉人物头部或脚部，需核对构图。当前官方导入说明要求素材图大于800×800；正式导入可改用 `-Size 1000`。脚本未在 Windows 实机验证。
