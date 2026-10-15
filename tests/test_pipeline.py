@@ -30,7 +30,7 @@ class PipelineTest(unittest.TestCase):
             root=Path(d);source=root/'images'
             for sku in ('ABC','DEF'):
                 folder=source/sku;folder.mkdir(parents=True)
-                for name in (sku+'-后.jpg',sku+'-前.jpg'):Image.new('RGB',(1200,1600),'red').save(folder/name)
+                for name in [sku+'-前.jpg']+[sku+f'-图{i}.jpg' for i in range(1,5)]:Image.new('RGB',(1200,1600),'red').save(folder/name)
             groups=discover(source)
             for group,name in zip(groups,['字母印花','字母印花']):group['print_name']=name
             profile=load(ASSETS/'运动短袖套装.json');profile['price']=29
@@ -39,7 +39,7 @@ class PipelineTest(unittest.TestCase):
             def upload(path,key):return 'https://example.com/'+Path(path).parent.name+'/'+Path(path).name
             with patch('desktop.legacy.upload_imgbb',side_effect=upload) as mocked:
                 app.work(values,profile,groups)
-                self.assertEqual(mocked.call_count,6)
+                self.assertEqual(mocked.call_count,12)
             output=next((root/'output').iterdir());file=output/'妙手导入.xlsx'
             self.assertTrue(file.is_file(),list(app.events.queue))
             workbook=load_workbook(file);sheet=workbook['Sheet1'];headers={str(c.value).strip():c.column for c in sheet[1] if c.value}
@@ -57,7 +57,7 @@ class PipelineTest(unittest.TestCase):
                 self.assertEqual(row['* 供货价\n（CNY）'],29)
                 self.assertEqual(row['建议售价\n（（CNY））'],145)
                 self.assertIn('素材图_1000x1000.jpg',row['* 产品素材图'])
-                self.assertEqual(len(row['* 颜色图'].splitlines()),2)
+                self.assertEqual(len(row['* 颜色图'].splitlines()),5)
                 self.assertEqual(row['*产地'],'中国-江西省')
             self.assertNotIn('TEST-NOT-A-CREDENTIAL',(output/'模板配置.json').read_text(encoding='utf-8'))
             self.assertTrue(any('待手动导入' in str(message) for message in app.events.queue))

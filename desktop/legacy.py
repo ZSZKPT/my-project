@@ -15,6 +15,7 @@ from desktop.template_editor import open_editor
 from desktop.print_names import read_names, title_for
 from desktop.thumbnails import add_thumbnail
 from desktop.tasks import Task, remember, last_task
+from import_tools.image_rules import validate_groups
 
 
 ASSETS = Path(getattr(sys, '_MEIPASS', Path(__file__).resolve().parent)) / 'assets'
@@ -108,7 +109,7 @@ class App:
             self.table.columnconfigure(1,weight=1);self.table.columnconfigure(2,weight=1)
             for i,g in enumerate(self.groups):
                 add_thumbnail(self,g,i)
-                ttk.Label(self.table,text=f'{g["sku"]}\n{len(g["files"])} 张图片',style='Card.TLabel',width=20,wraplength=180).grid(row=i,column=1,sticky='w',padx=(0,8))
+                ttk.Label(self.table,text=f'{g["sku"]}\n{len(g["files"])} 张图片'+(' · 不足5张' if len(g['files'])<5 else ' · 超过10张' if len(g['files'])>10 else ''),style='Card.TLabel' if 5<=len(g['files'])<=10 else 'Warning.TLabel',width=20,wraplength=180).grid(row=i,column=1,sticky='w',padx=(0,8))
                 variable=tk.StringVar(value=old.get(g['sku'],''));self.names.append(variable)
                 ttk.Entry(self.table,textvariable=variable,width=20).grid(row=i,column=2,pady=8,padx=(0,8),sticky='ew')
             self.counts_text.set(f'{len(self.groups)} 个货号 · {sum(len(g["files"]) for g in self.groups)} 张图片')
@@ -146,7 +147,7 @@ class App:
             config['price']=price
             from desktop.profiles import validate
             validate(config)
-            if any(len(g['files'])>10 for g in self.groups):raise ValueError('单个货号超过10张，请先移除多余轮播图')
+            validate_groups(self.groups)
             if not Path(values['template']).is_file():raise ValueError('请选择官方创建商品导入模板')
             if values['mode']=='ImgBB 自动上传':
                 if not values['key']:raise ValueError('请输入 ImgBB API Key')

@@ -3,6 +3,7 @@ import csv
 import math
 import re
 import unicodedata
+from import_tools.image_rules import validate_urls
 from copy import copy
 from decimal import Decimal, ROUND_DOWN
 from pathlib import Path
@@ -87,6 +88,7 @@ def export(template, rows, output, english_titles, origin='中国-江西省', pr
             colors=r.get('产品轮播图链接','') or r.get('产品预览图链接','')
             if colors:warnings.append('部分颜色图为空，使用源文件轮播图/预览图回填')
         if not colors:raise ValueError('源文件缺少颜色图、轮播图和预览图')
+        validate_urls([url.strip() for url in colors.splitlines() if url.strip()],r.get('主货号') or title)
         price = price_override if price_override is not None else number(match.group(1),'供货价')
         price = Decimal(str(price)).quantize(Decimal('0.01'), rounding=ROUND_DOWN)
         suggested = price * 5

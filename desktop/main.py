@@ -138,7 +138,7 @@ if __name__=='__main__':
             source=Path(temp)
             for index in range(12):
                 folder=source/f'TEST-{index:02d}';folder.mkdir()
-                Image.new('RGB',(600,800),'#087f8c').save(folder/'前.jpg')
+                for image_index in range(5):Image.new('RGB',(600,800),'#087f8c').save(folder/('前.jpg' if image_index==0 else f'图{image_index}.jpg'))
             image_app.variables['source'].set(str(source));image_app.scan()
             root.deiconify();root.geometry('1100x760');root.update()
             assert len(image_app.thumbnails)==12

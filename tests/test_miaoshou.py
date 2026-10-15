@@ -8,7 +8,7 @@ class MiaoshouTest(unittest.TestCase):
     def test_export_links_defaults_weights_and_price(self):
         rows=[]
         for size,weight in [('S',570),('M',600)]:
-            rows.append({'产品ID':'100','产品名称':'测试套装','主货号':'ABC','产品规格':'混合色|'+size,'供货价':'69CNY','尺寸':'长：33,宽：25, 高：2','毛重(g)':str(weight),'净重(g)':str(weight-10),'平台SKU':'ABC-'+size,'产品颜色图链接':'https://example.com/first.jpg\nhttps://example.com/second.jpg','产品素材图链接':'https://example.com/material.jpg','包装信息':'外包装形状：不规则\n外包装类型：软包装+软物\n外包装图片链接：https://example.com/package.jpg'})
+            rows.append({'产品ID':'100','产品名称':'测试套装','主货号':'ABC','产品规格':'混合色|'+size,'供货价':'69CNY','尺寸':'长：33,宽：25, 高：2','毛重(g)':str(weight),'净重(g)':str(weight-10),'平台SKU':'ABC-'+size,'产品颜色图链接':'\n'.join(f'https://example.com/{i}.jpg' for i in range(5)),'产品素材图链接':'https://example.com/material.jpg','包装信息':'外包装形状：不规则\n外包装类型：软包装+软物\n外包装图片链接：https://example.com/package.jpg'})
         template=Path(__file__).resolve().parents[1]/'desktop/assets/妙手Temu服饰模板.xlsx'
         with tempfile.TemporaryDirectory() as d:
             out=Path(d)/'out.xlsx';result=export(template,rows,out,{'测试套装':'Test set'})

@@ -4,6 +4,7 @@ import uuid
 from pathlib import Path
 from desktop.print_names import title_for
 from import_tools.miaoshou import number
+from import_tools.image_rules import validate_urls
 
 FIELDS=('name','title','english_title','category_id','origin','color','description','packaging_shape','packaging_type','packaging_image','variants')
 
@@ -53,7 +54,7 @@ def products_to_rows(profile,products,price):
         english=profile['english_title'].replace('{sku}',sku)
         titles[title]=english
         images=product['carousel_urls'].split('|')
-        if not 1<=len(images)<=10:raise ValueError('每个商品需1至10张轮播图')
+        validate_urls(images,sku)
         from import_tools.dianxiaomi import image_url
         for url in images:image_url(url)
         image_url(product['material_url'])

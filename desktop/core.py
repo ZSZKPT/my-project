@@ -19,10 +19,10 @@ def discover(source):
     source = Path(source).resolve()
     if not source.is_dir():
         raise ValueError('请选择图片目录')
-    folders = [source] if any(p.is_file() and p.suffix.lower() in IMAGE_TYPES for p in source.iterdir()) else sorted((p for p in source.iterdir() if p.is_dir()), key=lambda p: natural_key(p.name))
+    folders = [source] if any(p.is_file() and p.suffix.lower() in IMAGE_TYPES and '素材图' not in p.stem for p in source.iterdir()) else sorted((p for p in source.iterdir() if p.is_dir()), key=lambda p: natural_key(p.name))
     groups = []
     for folder in folders:
-        files = [p for p in folder.iterdir() if p.is_file() and not p.is_symlink() and p.suffix.lower() in IMAGE_TYPES and not p.stem.startswith('素材图_')]
+        files = [p for p in folder.iterdir() if p.is_file() and not p.is_symlink() and p.suffix.lower() in IMAGE_TYPES and '素材图' not in p.stem]
         files.sort(key=lambda p: ('前' not in p.stem, natural_key(p.stem)))
         if files:
             groups.append({'sku':folder.name, 'files':files})

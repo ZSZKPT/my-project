@@ -12,6 +12,7 @@ from pathlib import Path
 from desktop.core import prepare
 from desktop.profiles import products_to_rows, storage_dir
 from import_tools.miaoshou import export
+from import_tools.image_rules import validate_groups
 
 
 def atomic_json(path,value):
@@ -74,6 +75,7 @@ class Task:
 
     @classmethod
     def create(cls,values,config,groups,emit=None,gate=None):
+        validate_groups(groups)
         root=Path(values['output'])/('妙手_'+datetime.now().strftime('%Y%m%d_%H%M%S_%f'));root.mkdir(parents=True,exist_ok=False)
         shutil.copy2(values['template'],root/'导入模板.xlsx')
         atomic_json(root/'模板配置.json',config)
@@ -84,6 +86,7 @@ class Task:
 
     @classmethod
     def adopt_legacy(cls,directory,values,config,groups,emit=None):
+        validate_groups(groups)
         root=Path(directory).resolve()
         if (root/'任务进度.json').is_file():return cls(root/'任务进度.json',emit)
         if (root/'妙手导入.xlsx').exists():raise ValueError('该目录已有妙手导入.xlsx，可直接使用，不需要重新生成')
@@ -181,6 +184,7 @@ class Task:
         with task_lock(self.root):
             # Re-read after acquiring the lock, avoiding a stale state from another process.
             self.state=json.loads(self.path.read_text(encoding='utf-8'))
+            validate_groups(self.state['groups'],key='sources')
             self.emit('task',str(self.path));self.emit('output',str(self.root))
             if self.state['status']=='complete':
                 path=self.local(self.state['workbook'])
