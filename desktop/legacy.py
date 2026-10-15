@@ -105,8 +105,9 @@ class App:
         if self.busy:return
         try:
             old={g['sku']:v.get() for g,v in zip(self.groups,self.names)}
-            self.scanned_main_suffix=self.variables['main_suffix'].get().strip()
-            self.groups=discover(self.variables['source'].get(),self.scanned_main_suffix);self.scanned_source=Path(self.variables['source'].get()).resolve();self.names=[]
+            main_suffix=self.variables['main_suffix'].get().strip()
+            groups=discover(self.variables['source'].get(),main_suffix)
+            self.groups=groups;self.scanned_main_suffix=main_suffix;self.scanned_source=Path(self.variables['source'].get()).resolve();self.names=[]
             for child in self.table.winfo_children():child.destroy()
             self.thumbnails={}
             self.table.columnconfigure(1,weight=1);self.table.columnconfigure(2,weight=1)
