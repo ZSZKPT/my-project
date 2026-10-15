@@ -1,0 +1,30 @@
+name: Package Selection Web
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['selection/**', '.github/workflows/selection-web.yml']
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Check JavaScript syntax
+        run: |
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          html = Path('selection/index.html').read_text(encoding='utf-8')
+          Path('/tmp/selection.js').write_text(re.search(r'<script>(.*?)</script>',html,re.S).group(1),encoding='utf-8')
+          PY
+          node --check /tmp/selection.js
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Feifan-Selection-Web
+          path: selection/
+          if-no-files-found: error
