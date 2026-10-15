@@ -13,6 +13,7 @@ if __package__ in (None, ''):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from desktop.core import discover, prepare, upload_imgbb, load_profile
 from import_tools.dianxiaomi import export
+from desktop.print_names import read_names, title_for
 
 
 ASSETS = Path(getattr(sys, '_MEIPASS', Path(__file__).resolve().parent)) / 'assets'
@@ -47,6 +48,7 @@ class App:
         row=ttk.Frame(frame);row.pack(fill='x',pady=4);ttk.Label(row,text='已有图片链接 CSV（可选）',width=26).pack(side='left');ttk.Entry(row,textvariable=self.variables['links']).pack(side='left',fill='x',expand=True);ttk.Button(row,text='选择',command=lambda:self.choose('links',False)).pack(side='left')
         ttk.Label(frame,text='上传会将图片交给 ImgBB 并生成公开链接；密钥仅用于本次运行。手动模式不会上传。').pack(anchor='w',pady=4)
         self.scan_button=ttk.Button(frame,text='扫描货号 / 刷新名称表',command=self.scan);self.scan_button.pack(anchor='w')
+        ttk.Button(frame,text='导入印花名称表格（按货号）',command=self.import_names).pack(anchor='w',pady=4)
         self.canvas=tk.Canvas(frame,height=150);self.canvas.pack(fill='both',expand=True,pady=6)
         self.table=ttk.Frame(self.canvas);self.canvas.create_window((0,0),window=self.table,anchor='nw')
         scrollbar=ttk.Scrollbar(frame,orient='vertical',command=self.canvas.yview);scrollbar.pack(side='right',fill='y');self.canvas.configure(yscrollcommand=scrollbar.set)
@@ -74,6 +76,18 @@ class App:
             self.write('扫描完成，请逐行填写印花名称。')
         except Exception as error:messagebox.showerror('扫描失败',str(error))
 
+    def import_names(self):
+        if self.busy:return
+        try:
+            if not self.groups:raise ValueError('请先扫描货号')
+            path=filedialog.askopenfilename(filetypes=[('印花表格','*.xlsx *.csv')])
+            if not path:return
+            mapping=read_names(path);matched=0
+            for group,var in zip(self.groups,self.names):
+                if group['sku'] in mapping:var.set(mapping[group['sku']]);matched+=1
+            self.write(f'已匹配 {matched}/{len(self.groups)} 个货号，未匹配项保持原值。')
+        except Exception as error:messagebox.showerror('导入失败',str(error))
+
     def write(self,text):
         self.log.configure(state='normal');self.log.insert('end',text+'\n');self.log.see('end');self.log.configure(state='disabled')
 
@@ -87,7 +101,7 @@ class App:
             if not values['output']:raise ValueError('请选择输出目录')
             config=load_profile(values['profile']);config['title']=values['title']
             if '{print_name}' not in config['title']:raise ValueError('标题规则必须包含 {print_name}')
-            titles=[config['title'].replace('{print_name}',v.get().strip()).replace('{sku}',g['sku']) for g,v in zip(self.groups,self.names)]
+            titles=[title_for(config['title'],v.get().strip(),g['sku']) for g,v in zip(self.groups,self.names)]
             if len(titles)!=len(set(titles)):raise ValueError('不同货号生成了相同标题，请使用不同印花名或增加 {sku}')
             for v in config['variants']:v['price']=price
             if not Path(values['template']).is_file():raise ValueError('请选择官方创建商品导入模板')

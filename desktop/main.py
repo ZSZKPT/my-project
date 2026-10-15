@@ -7,13 +7,14 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 if __package__ in (None,''):sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from import_tools.miaoshou import read_csv, export, DEFAULT_ENGLISH
+from desktop.print_names import read_names, title_for
 ASSETS=Path(getattr(sys,'_MEIPASS',Path(__file__).resolve().parent))/'assets'
 
 class App:
     def __init__(self,window):
         self.window=window;window.title('妙手批量上架助手 · Temu服饰');window.geometry('1100x760')
         self.rows=[];self.names={};self.events=queue.Queue();self.busy=False
-        self.values={k:tk.StringVar(value=v) for k,v in {'source':'','output':'','template':str(ASSETS/'妙手Temu服饰模板.xlsx'),'origin':'中国-江西省','price':''}.items()}
+        self.values={k:tk.StringVar(value=v) for k,v in {'source':'','output':'','template':str(ASSETS/'妙手Temu服饰模板.xlsx'),'origin':'中国-江西省','price':'','title_rule':'女士圆领短袖2件套{print_name}印花圆领T恤+短裤'}.items()}
         frame=ttk.Frame(window,padding=18);frame.pack(fill='both',expand=True)
         ttk.Label(frame,text='妙手批量上架助手',font=('',18,'bold')).pack(anchor='w')
         ttk.Label(frame,text='读取SKU导出CSV → 核对英文标题与价格 → 生成妙手服饰导入表').pack(anchor='w',pady=8)
@@ -26,6 +27,10 @@ class App:
         ttk.Label(frame,text='留空供货价：保留源表各SKU价格。建议售价自动为供货价5倍；非定制品、非敏感属性。').pack(anchor='w',pady=5)
         ttk.Label(frame,text='素材图、颜色图、外包装图片均取源CSV链接，不重传、不替换。颜色图为空时使用源轮播图/预览图。').pack(anchor='w')
         self.scan_button=ttk.Button(frame,text='读取SKU并核对标题',command=self.scan);self.scan_button.pack(anchor='w',pady=8)
+        row=ttk.Frame(frame);row.pack(fill='x',pady=4)
+        ttk.Label(row,text='印花标题规则',width=25).pack(side='left')
+        ttk.Entry(row,textvariable=self.values['title_rule']).pack(side='left',fill='x',expand=True)
+        ttk.Button(row,text='导入印花表格',command=self.import_names).pack(side='left')
         self.canvas=tk.Canvas(frame,height=180);self.canvas.pack(fill='both',expand=True)
         self.table=ttk.Frame(self.canvas);self.canvas.create_window((0,0),window=self.table,anchor='nw')
         scrollbar=ttk.Scrollbar(frame,orient='vertical',command=self.canvas.yview);scrollbar.pack(side='right',fill='y');self.canvas.configure(yscrollcommand=scrollbar.set)
@@ -53,13 +58,38 @@ class App:
         if self.busy:return
         try:
             rows=read_csv(self.values['source'].get());old={k:v.get() for k,v in self.names.items()};self.rows=rows;self.loaded_source=self.values['source'].get();self.names={}
-            for widget in self.table.winfo_children():widget.destroy()
-            for index,title in enumerate(dict.fromkeys(r['产品名称'] for r in rows)):
-                ttk.Label(self.table,text=title,wraplength=370,width=45).grid(row=index,column=0,sticky='w',pady=6)
-                var=tk.StringVar(value=old.get(title,DEFAULT_ENGLISH.get(title,'')));self.names[title]=var
-                ttk.Entry(self.table,textvariable=var,width=75).grid(row=index,column=1,pady=6)
+            self.render_titles(old)
             self.write(f'读取 {len(rows)} 个SKU、{len(self.names)} 个标题。请填写或核对右侧英文标题。')
         except Exception as error:messagebox.showerror('读取失败',str(error))
+
+    def render_titles(self,old):
+        for widget in self.table.winfo_children():widget.destroy()
+        for index,title in enumerate(dict.fromkeys(r['产品名称'] for r in self.rows)):
+            ttk.Label(self.table,text=title,wraplength=370,width=45).grid(row=index,column=0,sticky='w',pady=6)
+            var=tk.StringVar(value=old.get(title,DEFAULT_ENGLISH.get(title,'')));self.names[title]=var
+            ttk.Entry(self.table,textvariable=var,width=75).grid(row=index,column=1,pady=6)
+
+
+    def import_names(self):
+        if self.busy:return
+        try:
+            if not self.rows:raise ValueError('请先读取SKU文件')
+            path=filedialog.askopenfilename(filetypes=[('印花表格','*.xlsx *.csv')])
+            if not path:return
+            mapping=read_names(path);rule=self.values['title_rule'].get()
+            matched={r['主货号'] for r in self.rows if r['主货号'] in mapping}
+            if not matched:raise ValueError('没有匹配的货号')
+            updates={sku:title_for(rule,mapping[sku],sku) for sku in matched}
+            if len(set(updates.values()))!=len(updates):raise ValueError('不同货号生成同名标题，请增加 {sku} 或使用不同印花名')
+            if not messagebox.askyesno('确认替换标题',f'按标题规则替换 {len(matched)} 个货号的中文标题，英文标题需重新核对。是否继续？'):return
+            old={k:v.get() for k,v in self.names.items()}
+            for r in self.rows:
+                if r['主货号'] in updates:r['产品名称']=updates[r['主货号']]
+            self.names={};self.render_titles(old)
+            missing={r['主货号'] for r in self.rows}-matched
+            extra=set(mapping)-matched
+            self.write(f'已匹配{len(matched)}个货号；未匹配源货号：{sorted(missing)}；表格多余货号：{sorted(extra)}。未匹配商品保留原标题，英文标题请核对。')
+        except Exception as error:messagebox.showerror('印花导入失败',str(error))
 
     def start(self):
         if self.busy:return
@@ -93,4 +123,11 @@ class App:
         self.window.after(100,self.poll)
 
 if __name__=='__main__':
-    root=tk.Tk();App(root);root.mainloop()
+    root=tk.Tk();App(root)
+    if '--self-test' in sys.argv:
+        root.withdraw();root.update()
+        from openpyxl import load_workbook
+        book=load_workbook(ASSETS/'妙手Temu服饰模板.xlsx',read_only=True)
+        assert 'Sheet1' in book.sheetnames
+        book.close();root.destroy()
+    else:root.mainloop()

@@ -30,3 +30,11 @@ Windows EXE：`MiaoshouTemuTool.exe`，不需安装 Python。此版本生成妙�
 Windows 双击 `windows/build-exe.cmd`，输出 `dist/MiaoshouTemuTool-Windows.zip`，需Python3.12+与联网安装依赖。GitHub Actions 的 Build Windows EXE 成功后也可下载同名artifact。
 
 测试覆盖CSV字段映射、默认值、价格覆盖、每尺码重量、图片链接原样保留和模板结构。实际Windows界面运行、妙手平台导入与发布仍需实机验证。
+
+## 印花表格批量导入
+
+支持 Excel `.xlsx` 和 CSV，第一行包含“货号、印花名称”，也支持“主货号/sku、印花名/print_name”。货号按文本保存以保留前导零。示例文件位于 `desktop/assets/印花名称导入示例.xlsx`。
+
+妙手模式先读取SKU CSV，再填写含 `{print_name}` 的完整标题规则，点击“导入印花表格”。按主货号精确匹配并确认后替换中文标题，英文标题须重新核对填写。未匹配的商品保留原标题，多余货号会提示；空名称和重复货号会拒绝整表导入。先前输入英文标题仅在对应中文标题未变时保留。印花名如已含“印花”，在默认规则下不重复追加。
+
+本地图片处理窗口也支持印花表格导入，先扫描文件夹再导入。该窗口仍输出原店小秘格式，妙手CSV模式输出妙手表格。

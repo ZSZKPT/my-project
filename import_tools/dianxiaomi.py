@@ -29,7 +29,8 @@ def build_rows(config, products):
         if not sku or not name or sku in seen:
             raise ValueError('货号与印花名称不能为空，货号不得重复')
         seen.add(sku)
-        title = title_rule.replace('{print_name}', name).replace('{sku}', sku)
+        normalized_name = name[:-2] if name.endswith('印花') and '{print_name}印花' in title_rule else name
+        title = title_rule.replace('{print_name}', normalized_name).replace('{sku}', sku)
         if title in titles:
             raise ValueError('不同货号生成了相同标题，可能被合并；请在标题规则中增加 {sku} 或使用不同印花名')
         titles.add(title)
