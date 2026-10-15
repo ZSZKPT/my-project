@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {productLink,metric,publicProduct,mergeSnapshot} from './core.mjs';
+import {productLink,metric,publicProduct,mergeSnapshot,accessBarrier} from './core.mjs';
 const target={id:'shop',platform:'Temu',url:'https://www.temu.com/mall.html?mall_id=123',site:'US',name:'参考店铺'};
 const date='2026-10-15',now='2026-10-15T01:00:00Z';
 function product(id='123',sales=5){return publicProduct({href:`https://www.temu.com/print-shirt-g-${id}.html?refer_page_name=mall`,title:'印花上衣',image:'https://img.example.com/1.jpg',text:`${sales} sold 8 reviews`},target,date)}
@@ -35,4 +35,10 @@ test('later discoveries are new and histories are upserted per day',()=>{
 test('Pinterest sales remain unknown and save and like metrics are independent',()=>{
  const pin=publicProduct({href:'https://www.pinterest.com/pin/123/',title:'wallpaper',image:'https://i.pinimg.com/image.jpg',text:'520 saves 20 likes 999 sold'},{...target,platform:'Pinterest',url:'https://www.pinterest.com/search/pins/?q=wallpaper'},date);
  assert.equal(pin.sales,null);assert.equal(pin.salesText,'');assert.equal(pin.saves,520);assert.equal(pin.likes,20);assert.equal(pin.seamless,'未核验');
+});
+
+test('SHEIN challenge routes are recognized without trying to interact with verification',()=>{
+ assert.equal(accessBarrier('https://us.shein.com/risk/challenge?x=1','shop'), 'verification_required');
+ assert.equal(accessBarrier('https://www.temu.com/login.html'), 'auth_required');
+ assert.equal(accessBarrier('https://www.temu.com/mall.html','shirts'),null);
 });
