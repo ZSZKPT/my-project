@@ -16,3 +16,7 @@
 ## 发布到 GitHub Pages
 
 仓库提供手动工作流 `Publish Selection Web to Pages`。先在仓库 Settings → Pages → Build and deployment 将 Source 设置为 GitHub Actions，再到 Actions 运行该工作流。成功后的工作流环境链接才是实际在线网址。该工作流发布本选款网页至仓库 Pages 根目录；如仓库已有其他 Pages 网站，请先确认是否替换。此交付尚未运行发布工作流，也没有声称已上线。
+
+## Pinterest 灵感
+
+已登记 wallpaper、seamless pattern、surface pattern design 三个关键词来源。支持 Pinterest 图片记录、公开点赞数 / 收藏数、100 / 500 / 1,000 互动门槛、分别按点赞或收藏排序，以及“未核验 / 已核验 / 不适用”的无缝拼接核验字段。字段未知时留空，不能用推测补齐；仅收录参考链接和已有数据，目前不自动访问 Pinterest。页面中的“收藏”是你自己的选款标记，“公开收藏数”是来源平台的公开指标，两者独立。
