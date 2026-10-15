@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['desktop/**', 'import_tools/**', '.github/workflows/windows-exe.yml']
+    paths: ['desktop/**', 'import_tools/**', 'tests/**', '.github/workflows/windows-exe.yml']
 permissions:
   contents: read
 jobs:

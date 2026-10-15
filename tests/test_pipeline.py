@@ -1,5 +1,6 @@
 import json
 import queue
+import threading
 import tempfile
 import unittest
 from pathlib import Path
@@ -34,7 +35,7 @@ class PipelineTest(unittest.TestCase):
             groups=discover(source)
             for group,name in zip(groups,['字母印花','字母印花']):group['print_name']=name
             profile=load(ASSETS/'运动短袖套装.json');profile['price']=29
-            app=App.__new__(App);app.events=queue.Queue()
+            app=App.__new__(App);app.events=queue.Queue();app.stop_retry=threading.Event()
             values={'output':str(root/'output'),'size':'1000','mode':'ImgBB 自动上传','links':'','key':'TEST-NOT-A-CREDENTIAL','template':str(ASSETS/'妙手Temu服饰模板.xlsx')}
             def upload(path,key):return 'https://example.com/'+Path(path).parent.name+'/'+Path(path).name
             with patch('desktop.legacy.upload_imgbb',side_effect=upload) as mocked:
