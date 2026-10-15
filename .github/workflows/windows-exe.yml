@@ -16,10 +16,11 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install -r desktop/requirements.txt
       - run: python -m unittest discover -s tests -p test_desktop.py -v
-      - run: python -m PyInstaller --noconfirm --clean --onefile --windowed --name TemuImportTool --paths . --add-data "desktop/assets;assets" desktop/main.py
-      - run: Compress-Archive -Path dist/TemuImportTool.exe,desktop/README.md -DestinationPath dist/TemuImportTool-Windows.zip
+      - run: python -m unittest discover -s tests -p test_miaoshou.py -v
+      - run: python -m PyInstaller --noconfirm --clean --onefile --windowed --name MiaoshouTemuTool --paths . --add-data "desktop/assets;assets" desktop/main.py
+      - run: Compress-Archive -Path dist/MiaoshouTemuTool.exe,desktop/README.md -DestinationPath dist/MiaoshouTemuTool-Windows.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: TemuImportTool-Windows
-          path: dist/TemuImportTool-Windows.zip
+          name: MiaoshouTemuTool-Windows
+          path: dist/MiaoshouTemuTool-Windows.zip
           if-no-files-found: error
