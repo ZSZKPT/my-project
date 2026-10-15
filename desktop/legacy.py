@@ -101,6 +101,14 @@ class App:
         path=filedialog.askdirectory() if folder else filedialog.askopenfilename(filetypes=[('表格','*.xlsx *.csv')])
         if path:self.variables[key].set(path)
 
+    def refresh_main_suffix_options(self):
+        try:
+            groups=discover(self.variables['source'].get(),'')
+            suffixes=sorted({path.stem[-2:] for group in groups for path in group['files']})
+            self.main_suffix_select.configure(values=suffixes)
+        except (OSError,ValueError):
+            pass
+
     def scan(self):
         if self.busy:return
         try:
