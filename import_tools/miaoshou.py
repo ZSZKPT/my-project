@@ -2,6 +2,7 @@
 import csv
 import math
 import re
+import unicodedata
 from copy import copy
 from decimal import Decimal, ROUND_DOWN
 from pathlib import Path
@@ -26,17 +27,30 @@ def read_csv(path):
 
 
 def number(value, label, positive=True):
+    if value is None or (isinstance(value,str) and not value.strip()):raise ValueError(f'{label}不能为空')
+    if isinstance(value,bool):raise ValueError(f'{label}不是有效数字')
+    if isinstance(value,str):value=unicodedata.normalize('NFKC',value).strip()
     try:value=float(value)
     except (ValueError,TypeError):raise ValueError(f'{label} 不是有效数字')
     if not math.isfinite(value) or (value<=0 if positive else value<0):raise ValueError(f'{label} 数值无效')
     return value
 
 
+def parse_price(value,label='统一申报价'):
+    if value is None or not str(value).strip():raise ValueError(f'{label}不能为空，请填写例如29或29.90')
+    if isinstance(value,str):
+        text=unicodedata.normalize('NFKC',value).strip()
+        match=re.fullmatch(r'(?:[¥￥]\s*)?(\d+(?:\.\d+)?)\s*(?:元|CNY)?',text,re.IGNORECASE)
+        if not match:raise ValueError(f'{label}格式不正确，请填写例如29或29.90，不要使用逗号')
+        value=match.group(1)
+    return number(value,label)
+
+
 def export(template, rows, output, english_titles, origin='中国-江西省', price_override=None):
     if not rows:raise ValueError('没有SKU数据')
     if Path(output).exists():raise ValueError('输出文件已存在，请换文件名')
     if origin!='中国-江西省' and not origin.strip():raise ValueError('产地不能为空')
-    if price_override is not None:price_override=number(price_override,'统一供货价')
+    if price_override is not None:price_override=parse_price(price_override,'统一供货价')
     w=load_workbook(template);s=w['Sheet1']
     headers={str(c.value).strip():c.column for c in s[1] if c.value}
     categories={str(name):str(cid) for cid,name in w['类目ID'].iter_rows(min_row=2,values_only=True) if name}

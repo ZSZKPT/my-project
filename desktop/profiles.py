@@ -23,7 +23,7 @@ def validate(profile):
         size=str(variant.get('size','')).strip()
         if not size or size in seen:raise ValueError('模板尺码为空或重复')
         seen.add(size)
-        for key in ('length_cm','width_cm','height_cm','weight_g'):number(variant.get(key),key)
+        for key,label in [('length_cm','包装长'),('width_cm','包装宽'),('height_cm','包装高'),('weight_g','毛重')]:number(variant.get(key),size+'尺码的'+label)
         if variant.get('net_weight_g') not in (None,''):number(variant['net_weight_g'],'净重',False)
     if profile.get('packaging_shape') not in ('','长方体','不规则','圆柱体',None):raise ValueError('外包装形状无效')
     if profile.get('packaging_type') not in ('','硬包装','软包装+硬物','软包装+软物',None):raise ValueError('外包装类型无效')

@@ -41,7 +41,9 @@ def build(app):
         shell=ttk.Frame(parent,style='Card.TFrame',padding=16);shell.pack(fill='x',pady=(0,12))
         ttk.Label(shell,text=title,style='Section.TLabel').pack(anchor='w',pady=(0,10));return shell
     def entry(parent,key,label):
-        ttk.Label(parent,text=label,style='Card.TLabel').pack(anchor='w',pady=(7,4));ttk.Entry(parent,textvariable=app.variables[key]).pack(fill='x')
+        ttk.Label(parent,text=label,style='Card.TLabel').pack(anchor='w',pady=(7,4))
+        field=ttk.Entry(parent,textvariable=app.variables[key]);field.pack(fill='x')
+        if key=='price':app.price_entry=field
     def path_row(parent,key,label,folder):
         ttk.Label(parent,text=label,style='Card.TLabel').pack(anchor='w',pady=(7,4))
         row=ttk.Frame(parent,style='Card.TFrame');row.pack(fill='x')
@@ -56,7 +58,7 @@ def build(app):
     path_row(files,'source','本地货号图片目录',True);path_row(files,'output','输出目录',True)
     entry(files,'title','中文标题规则（{print_name} 为印花名）')
     entry(files,'price','统一申报价 / CNY')
-    ttk.Label(files,text='建议售价自动为申报价的 5 倍。',style='Muted.TLabel').pack(anchor='w',pady=(6,0))
+    ttk.Label(files,text='申报价必填，如 29 或 29.90；建议售价自动为 5 倍。',style='Muted.TLabel').pack(anchor='w',pady=(6,0))
     upload=card(left,'03  图片与上传')
     ttk.Label(upload,text='素材图尺寸',style='Card.TLabel').pack(anchor='w')
     ttk.Combobox(upload,textvariable=app.variables['size'],values=['800','1000','1200'],state='readonly').pack(fill='x',pady=5)

@@ -12,7 +12,7 @@ from tkinter import ttk, filedialog, messagebox
 if __package__ in (None, ''):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from desktop.core import discover, prepare, upload_imgbb, load_profile
-from import_tools.miaoshou import export
+from import_tools.miaoshou import export, parse_price
 from desktop.profiles import load as load_template, storage_dir, products_to_rows
 from desktop.template_editor import open_editor
 from desktop.print_names import read_names, title_for
@@ -129,8 +129,7 @@ class App:
             values={k:v.get().strip() for k,v in self.variables.items()}
             if not self.groups or any(not v.get().strip() for v in self.names):raise ValueError('先扫描并填写所有印花名称')
             if Path(values['source']).resolve()!=self.scanned_source:raise ValueError('图片目录已变化，请重新扫描')
-            price=float(values['price'])
-            if not math.isfinite(price) or price<=0:raise ValueError('请填写正数申报价')
+            price=parse_price(values['price'])
             if not values['output']:raise ValueError('请选择输出目录')
             if Path(values['output']).resolve().is_relative_to(self.scanned_source):raise ValueError('输出目录必须在图片输入目录之外，避免重复扫描生成图片')
             config=json.loads(json.dumps(self.active_profile));config['title']=values['title']
@@ -149,7 +148,10 @@ class App:
             self.profile_select.configure(state='disabled')
             self.progress_value.set(0);self.status_text.set('正在处理');self.status_label.configure(bg='#244b53',fg='#d9eff0')
             threading.Thread(target=self.work,args=(values,config,groups),daemon=True).start()
-        except Exception as error:messagebox.showerror('信息不完整',str(error))
+        except Exception as error:
+            messagebox.showerror('信息不完整',str(error))
+            if '统一申报价' in str(error) and hasattr(self,'price_entry'):
+                self.price_entry.focus_set();self.price_entry.selection_range(0,'end')
 
     def work(self,values,config,groups):
         try:
