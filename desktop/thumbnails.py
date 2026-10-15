@@ -18,11 +18,20 @@ def open_preview(parent,path,sku):
     try:
         bounds=(min(960,parent.winfo_screenwidth()-140),min(760,parent.winfo_screenheight()-160))
         image=preview_image(path,bounds)
-        window=tk.Toplevel(parent);window.title(f'飞凡上架 · {sku} · 主图预览');window.configure(bg='white')
+        owner=parent._root()
+        previous=getattr(owner,'_feifan_preview',None)
+        if previous is not None and previous.winfo_exists():previous.destroy()
+        window=tk.Toplevel(parent)
+        owner._feifan_preview=window
+        window.title(f'飞凡上架 · {sku} · 主图预览');window.configure(bg='white')
         photo=ImageTk.PhotoImage(image,master=window)
         label=tk.Label(window,image=photo,bg='white',padx=12,pady=12);label.image=photo;label.pack()
         ttk.Label(window,text=path.name,padding=10).pack()
-        window.bind('<Escape>',lambda event:window.destroy())
+        def close(event=None):
+            if getattr(owner,'_feifan_preview',None) is window:owner._feifan_preview=None
+            window.destroy()
+        window.protocol('WM_DELETE_WINDOW',close)
+        window.bind('<Escape>',close)
         return window
     except (OSError,ValueError,Image.DecompressionBombError) as error:
         messagebox.showerror('无法预览图片',str(error),parent=parent)

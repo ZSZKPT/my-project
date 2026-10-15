@@ -95,3 +95,6 @@ def build(app):
     app.log=tk.Text(task,height=7,bg='#112d35',fg='#d7eaed',insertbackground='white',font=('Consolas',10),relief='flat',padx=12,pady=10,state='disabled',wrap='word');app.log.pack(fill='x')
     app.run_button=ttk.Button(task,text='开始自动处理并生成妙手表格',style='Accent.TButton',command=app.start);app.run_button.pack(fill='x',pady=(14,8))
     ttk.Label(task,text='生成后请到妙手批量手动导入，选择尺码表及属性，再确认发布。',style='Muted.TLabel',wraplength=600).pack(anchor='w')
+
+    from desktop.scrolling import enable_region_scrolling
+    enable_region_scrolling(root,[left_canvas,app.canvas])

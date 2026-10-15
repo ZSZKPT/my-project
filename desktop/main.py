@@ -135,14 +135,25 @@ if __name__=='__main__':
         from PIL import Image
         from desktop.thumbnails import open_preview
         with tempfile.TemporaryDirectory() as temp:
-            folder=Path(temp)/'TEST-THUMB';folder.mkdir()
-            Image.new('RGB',(600,800),'#087f8c').save(folder/'TEST-THUMB-前.jpg')
-            image_app.variables['source'].set(str(folder));image_app.scan();root.update()
-            assert len(image_app.thumbnails)==1
-            assert len(image_app.names)==1
+            source=Path(temp)
+            for index in range(12):
+                folder=source/f'TEST-{index:02d}';folder.mkdir()
+                Image.new('RGB',(600,800),'#087f8c').save(folder/'前.jpg')
+            image_app.variables['source'].set(str(source));image_app.scan()
+            root.deiconify();root.geometry('1100x760');root.update()
+            assert len(image_app.thumbnails)==12
+            assert len(image_app.names)==12
             image_app.names[0].set('缩略图测试')
-            preview=open_preview(root,folder/'TEST-THUMB-前.jpg','TEST-THUMB');root.update()
+            before=image_app.canvas.yview()[0]
+            entry=next(widget for widget in image_app.table.winfo_children() if isinstance(widget,ttk.Entry))
+            entry.event_generate('<MouseWheel>',delta=-120);root.update()
+            assert image_app.canvas.yview()[0]>before, 'Mouse wheel did not scroll print list'
+            preview=open_preview(root,image_app.groups[0]['files'][0],'TEST-00');root.update()
             assert preview is not None
-            preview.destroy()
+            second=open_preview(root,image_app.groups[1]['files'][0],'TEST-01');root.update()
+            assert second is not None
+            assert not preview.winfo_exists(), 'Previous preview was not closed'
+            assert root._feifan_preview is second
+            second.destroy()
         root.destroy()
     else:root.mainloop()
