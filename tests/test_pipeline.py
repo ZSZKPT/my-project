@@ -22,7 +22,7 @@ class PipelineTest(unittest.TestCase):
             self.assertNotEqual(first,second)
             self.assertEqual(load(first)['name'],'运动短袖套装')
             self.assertEqual(load(second)['name'],'运动套装二')
-            self.assertNotIn('not-a-real-key',second.read_text())
+            self.assertNotIn('not-a-real-key',second.read_text(encoding='utf-8'))
             self.assertEqual(len(list(Path(d).glob('*.json'))),2)
 
     def test_image_upload_to_miaoshou_workbook(self):
@@ -54,5 +54,5 @@ class PipelineTest(unittest.TestCase):
                 self.assertIn('素材图_1000x1000.jpg',row['* 产品素材图'])
                 self.assertEqual(len(row['* 颜色图'].splitlines()),2)
                 self.assertEqual(row['*产地'],'中国-江西省')
-            self.assertNotIn('TEST-NOT-A-CREDENTIAL',(output/'模板配置.json').read_text())
+            self.assertNotIn('TEST-NOT-A-CREDENTIAL',(output/'模板配置.json').read_text(encoding='utf-8'))
             self.assertTrue(any('待手动导入' in str(message) for message in app.events.queue))
