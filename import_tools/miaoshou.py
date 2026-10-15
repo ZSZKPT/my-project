@@ -45,7 +45,9 @@ def export(template, rows, output, english_titles, origin='中国-江西省', pr
     for merged in list(s.merged_cells.ranges):
         if merged.min_row>=3:s.unmerge_cells(str(merged))
     for row in s.iter_rows(min_row=3):
-        for c in row:c.value=None
+        for c in row:
+            c.hyperlink=None
+            c.value=None
     seen=set();warnings=[]
     for index,r in enumerate(rows,3):
         title=r.get('产品名称','').strip();english=english_titles.get(title,'').strip()
