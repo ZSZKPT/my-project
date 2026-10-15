@@ -185,7 +185,6 @@ class App:
         try:
             emit=lambda kind,value:self.events.put((kind,value))
             task=Task(task_path,emit) if task_path else Task.create(values,config,groups,emit)
-            emit('task',str(task.path))
             task.run(lambda path:upload_imgbb(path,values['key']),values.get('links') or None)
         except Exception as error:
             self.events.put(('status','被动中断 · 可继续上次任务'))
@@ -197,6 +196,23 @@ class App:
         self.run_button.configure(text='开始新任务并生成妙手表格',command=self.start)
         self.progress_value.set(0);self.status_text.set('准备新任务')
         self.write('已切换为新任务模式；旧任务记录仍保留，可加载继续。')
+
+    def relocate_sources(self):
+        if self.busy:return
+        try:
+            path=getattr(self,'last_task',None)
+            if not path or not Path(path).is_file():
+                selected=filedialog.askopenfilename(title='先选择任务进度.json',filetypes=[('任务记录','*.json')])
+                if not selected:return
+                path=Path(selected)
+            directory=filedialog.askdirectory(title='选择原图现在的父目录（包含各货号文件夹）')
+            if not directory:return
+            count=Task(path).relink_sources(directory)
+            self.last_task=Path(path);remember(path);self.resume_button.configure(state='normal')
+            self.variables['source'].set(directory)
+            self.write(f'已重新定位{count}个未处理货号的原图路径；原图、已处理图片及上传链接未改动。点击继续上次任务。')
+            self.status_text.set('原图路径已更新 · 可继续')
+        except Exception as error:messagebox.showerror('重新定位失败',str(error))
 
     def resume_saved(self,select=False):
         if self.busy:return

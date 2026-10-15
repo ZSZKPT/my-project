@@ -8,7 +8,7 @@ import threading
 import uuid
 from contextlib import contextmanager
 from datetime import datetime
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from desktop.core import prepare
 from desktop.profiles import products_to_rows, storage_dir
 from import_tools.miaoshou import export
@@ -128,6 +128,29 @@ class Task:
         except ValueError:raise ValueError('任务记录包含非法文件路径') from None
         return path
 
+    def relink_sources(self,directory):
+        directory=Path(directory).resolve()
+        if not directory.is_dir():raise ValueError('请选择有效的原图目录')
+        with task_lock(self.root):
+            self.state=json.loads(self.path.read_text(encoding='utf-8'))
+            changes=[];missing=[]
+            for group in self.state['groups']:
+                if group['prepared']:continue
+                replacement=[]
+                for old in group['sources']:
+                    if Path(old).is_file():replacement.append(old);continue
+                    name=PureWindowsPath(old).name if '\\' in old else Path(old).name
+                    candidates=[directory/group['sku']/name]
+                    if directory.name==group['sku']:candidates.append(directory/name)
+                    match=next((p for p in candidates if p.is_file()),None)
+                    if match is None:missing.append(group['sku']+'/'+name)
+                    else:replacement.append(str(match))
+                changes.append((group,replacement))
+            if missing:raise ValueError('未找到以下原图，未更改任务：'+ '、'.join(missing[:10]))
+            for group,replacement in changes:group['sources']=replacement
+            self.state['settings']['source']=str(directory);self.save()
+            return len(changes)
+
     def boundary(self):
         if not self.gate.is_set():
             self.state['status']='paused';self.save();self.emit('status','已暂停 · 进度已保存')
@@ -140,16 +163,28 @@ class Task:
                 path=self.local(item['path'])
                 if not path.is_file() or digest(path)!=item['sha256']:raise ValueError(f'{g["sku"]}已处理图片缺失或被修改，请恢复任务输出文件后继续')
             return
+        target=self.local(g['sku'])
+        manifest=target/'.prepared-manifest.json'
+        if manifest.is_file():
+            record=json.loads(manifest.read_text(encoding='utf-8'))
+            if len(record['carousel'])!=len(g['sources']):raise ValueError('已处理图片数量与任务不一致')
+            for item in record['files']:
+                if digest(self.local(item['path']))!=item['sha256']:raise ValueError('已处理图片校验失败，请恢复文件')
+            g['prepared']=record;self.save();self.emit('log',g['sku']+'已恢复处理图片记录，无需重新生成');return
+        missing=[p for p in g['sources'] if not Path(p).is_file()]
+        if missing:raise ValueError(g['sku']+'找不到原图：'+str(missing[0])+'；请点击“重新定位原图目录”，不要删除任务或输出文件')
         self.boundary()
         stage=self.root/('.prepare-'+uuid.uuid4().hex);stage.mkdir()
         try:
             ready=prepare({'sku':g['sku'],'files':[Path(p) for p in g['sources']]},stage,int(self.state['settings']['size']))
             target=self.local(g['sku'])
             if target.exists():target.rename(self.root/('.preserved-'+uuid.uuid4().hex))
+            paths=ready['carousel'];material=ready['material']
+            record={'carousel':[(Path(g['sku'])/p.name).as_posix() for p in paths],'material':(Path(g['sku'])/material.name).as_posix(),
+                    'files':[{'path':(Path(g['sku'])/p.name).as_posix(),'sha256':digest(p)} for p in paths+[material]]}
+            atomic_json(stage/g['sku']/'.prepared-manifest.json',record)
             shutil.move(str(stage/g['sku']),str(target))
-            paths=[target/p.name for p in ready['carousel']];material=target/ready['material'].name
-            g['prepared']={'carousel':[p.relative_to(self.root).as_posix() for p in paths],'material':material.relative_to(self.root).as_posix(),
-                           'files':[{'path':p.relative_to(self.root).as_posix(),'sha256':digest(p)} for p in paths+[material]]}
+            g['prepared']=record
             self.save();self.emit('log',g['sku']+' 图片已处理并保存')
         finally:shutil.rmtree(stage,ignore_errors=True)
 
@@ -247,7 +282,9 @@ class Task:
 
 
 def remember(path):
-    atomic_json(storage_dir().parent/'last-task.json',{'task':str(Path(path).resolve())})
+    directory=storage_dir().parent
+    directory.mkdir(parents=True,exist_ok=True)
+    atomic_json(directory/'last-task.json',{'task':str(Path(path).resolve())})
 
 
 def last_task():

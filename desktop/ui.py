@@ -74,6 +74,7 @@ def build(app):
     path_row(advanced,'template','妙手官方服饰导入模板',False)
     ttk.Button(advanced,text='打开 SKU CSV 转换工具',command=app.csv_tool).pack(fill='x',pady=(12,0))
     ttk.Button(advanced,text='接续旧版输出目录',command=app.adopt_old_output).pack(fill='x',pady=(8,0))
+    ttk.Button(advanced,text='重新定位原图目录',command=app.relocate_sources).pack(fill='x',pady=(8,0))
     right=ttk.Frame(body);right.grid(row=0,column=1,sticky='nsew');right.columnconfigure(0,weight=1);right.rowconfigure(0,weight=1)
     names=ttk.Frame(right,style='Card.TFrame',padding=18);names.grid(row=0,column=0,sticky='nsew',pady=(0,12));names.columnconfigure(0,weight=1);names.rowconfigure(2,weight=1)
     top=ttk.Frame(names,style='Card.TFrame');top.grid(row=0,column=0,columnspan=2,sticky='ew')
