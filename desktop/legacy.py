@@ -1,22 +1,20 @@
-import csv
 import json
-import math
 import queue
 import sys
 import threading
-from datetime import datetime
 from pathlib import Path
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 
 if __package__ in (None, ''):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from desktop.core import discover, prepare, upload_imgbb, load_profile
+from desktop.core import discover, upload_imgbb
 from import_tools.miaoshou import export, parse_price
 from desktop.profiles import load as load_template, storage_dir, products_to_rows
 from desktop.template_editor import open_editor
 from desktop.print_names import read_names, title_for
 from desktop.thumbnails import add_thumbnail
+from desktop.tasks import Task, remember, last_task
 
 
 ASSETS = Path(getattr(sys, '_MEIPASS', Path(__file__).resolve().parent)) / 'assets'
@@ -39,6 +37,16 @@ class App:
         build(self)
         self.refresh_templates()
         self.current_output=None
+        self.last_task=last_task()
+        if self.last_task is not None:
+            self.resume_button.configure(state='normal')
+            try:
+                task=Task(self.last_task)
+                if task.state['status']!='complete':
+                    self.status_text.set('检测到未完成任务 · 可继续')
+                    self.run_button.configure(text='继续上次中断的任务',command=self.resume_saved)
+                    self.write('检测到上次任务：'+str(self.last_task))
+            except (OSError,ValueError,KeyError):pass
         window.after(100,self.poll)
 
     def refresh_templates(self):
@@ -146,6 +154,7 @@ class App:
             groups=[dict(g,print_name=v.get().strip()) for g,v in zip(self.groups,self.names)]
             self.busy=True;self.run_button.configure(state='disabled');self.scan_button.configure(state='disabled')
             self.profile_select.configure(state='disabled')
+            self.resume_button.configure(state='disabled');self.load_task_button.configure(state='disabled')
             self.progress_value.set(0);self.status_text.set('正在处理');self.status_label.configure(bg='#244b53',fg='#d9eff0')
             threading.Thread(target=self.work,args=(values,config,groups),daemon=True).start()
         except Exception as error:
@@ -153,53 +162,68 @@ class App:
             if '统一申报价' in str(error) and hasattr(self,'price_entry'):
                 self.price_entry.focus_set();self.price_entry.selection_range(0,'end')
 
-    def work(self,values,config,groups):
+    def adopt_old_output(self):
+        if self.busy:return
         try:
-            out=Path(values['output'])/('妙手_'+datetime.now().strftime('%Y%m%d_%H%M%S_%f'));out.mkdir(parents=True,exist_ok=False)
-            self.events.put(('log',f'输出目录：{out}'))
-            self.events.put(('output',str(out)))
-            total=sum(len(group['files'])+1 for group in groups);completed=0
-            link_rows={}
-            if values['links']:
-                with open(values['links'],encoding='utf-8-sig',newline='') as f:
-                    for r in csv.DictReader(f):
-                        if r.get('sku') in link_rows:raise ValueError('链接表有重复货号')
-                        link_rows[r['sku']]=r
-            products=[]
-            link_file=out/'图片链接.csv'
-            with open(link_file,'w',encoding='utf-8-sig',newline='') as f:
-                writer=csv.DictWriter(f,fieldnames=['sku','print_name','carousel_urls','material_url','preview_url']);writer.writeheader()
-                for g in groups:
-                    if len(g['files'])>10:raise ValueError(f'{g["sku"]} 超过10张，请先移除不需要的轮播图')
-                    ready=prepare(g,out,int(values['size']));self.events.put(('log',f'{g["sku"]} 图片处理完成'))
-                    row={'sku':g['sku'],'print_name':g['print_name'],'carousel_urls':'','material_url':'','preview_url':''}
-                    if values['mode']=='ImgBB 自动上传':
-                        urls=[]
-                        for path in ready['carousel']:
-                            urls.append(upload_imgbb(path,values['key']))
-                            completed+=1;self.events.put(('progress',completed/total*90))
-                            self.events.put(('log',f'{g["sku"]} 已上传 {len(urls)} 张'))
-                        row.update(carousel_urls='|'.join(urls),material_url=upload_imgbb(ready['material'],values['key']),preview_url=urls[0])
-                        completed+=1;self.events.put(('progress',completed/total*90))
-                    elif g['sku'] in link_rows:
-                        row.update({k:link_rows[g['sku']].get(k,'') for k in ['carousel_urls','material_url','preview_url']})
-                    writer.writerow(row);f.flush();products.append(row)
-            (out/'模板配置.json').write_text(json.dumps(config,ensure_ascii=False,indent=2),encoding='utf-8')
-            if all(p['carousel_urls'] and p['material_url'] for p in products):
-                rows,titles=products_to_rows(config,products,config['price'])
-                self.events.put(('progress',95))
-                result=export(values['template'],rows,out/'妙手导入.xlsx',titles,config['origin'])
-                self.events.put(('progress',100));self.events.put(('status','表格已生成 · 待手动导入'))
-                self.events.put(('log',f'已生成妙手 Excel：{result["product_count"]}个商品，{result["sku_count"]}行SKU；建议售价=申报价5倍。'))
-                for warning in result['warnings']:self.events.put(('log','提示：'+warning))
-                self.events.put(('log','表格已生成，待手动导入。请在妙手批量选择尺码表、补充属性并确认发布。'))
-            else:
-                self.events.put(('status','图片已处理 · 待补链接'))
-                self.events.put(('log','尚缺在线链接：已生成图片和图片链接.csv。上传后填写链接表，下次选择该CSV再生成Excel。'))
+            if not self.groups or any(not var.get().strip() for var in self.names):raise ValueError('先扫描原始图片目录并填写/导入印花名，再接续旧版输出')
+            values={key:var.get().strip() for key,var in self.variables.items()}
+            config=json.loads(json.dumps(self.active_profile));config['title']=values['title'];config['price']=parse_price(values['price'])
+            from desktop.profiles import validate
+            validate(config)
+            directory=filedialog.askdirectory(title='选择旧版失败任务的输出目录（包含图片链接.csv）')
+            if not directory:return
+            if not messagebox.askyesno('接续旧版输出', '请先关闭旧版软件。将沿用该目录已保存的链接和图片，并使用当前模板与申报价。旧版没有保存链接的部分仍需重新上传。是否继续？'):return
+            groups=[dict(group,print_name=var.get().strip()) for group,var in zip(self.groups,self.names)]
+            task=Task.adopt_legacy(directory,values,config,groups)
+            self.last_task=task.path;remember(task.path);self.resume_button.configure(state='normal')
+            self.write('旧版记录已接续。已保存的在线链接会复用；没有落盘的链接无法恢复。')
+            self.resume_saved()
+        except Exception as error:messagebox.showerror('无法接续旧输出',str(error))
+
+    def work(self,values,config,groups,task_path=None):
+        try:
+            emit=lambda kind,value:self.events.put((kind,value))
+            task=Task(task_path,emit) if task_path else Task.create(values,config,groups,emit)
+            emit('task',str(task.path))
+            task.run(lambda path:upload_imgbb(path,values['key']),values.get('links') or None)
         except Exception as error:
-            self.events.put(('status','处理失败 · 请查看日志'))
-            self.events.put(('log',f'处理停止：{error}。已生成文件保留；已上传图片不会自动删除。'))
+            self.events.put(('status','被动中断 · 可继续上次任务'))
+            self.events.put(('log',f'任务中断：{error}。已保存的图片和链接会在继续时复用。'))
         finally:self.events.put(('done',None))
+
+    def new_task(self):
+        if self.busy:return
+        self.run_button.configure(text='开始新任务并生成妙手表格',command=self.start)
+        self.progress_value.set(0);self.status_text.set('准备新任务')
+        self.write('已切换为新任务模式；旧任务记录仍保留，可加载继续。')
+
+    def resume_saved(self,select=False):
+        if self.busy:return
+        try:
+            path=getattr(self,'last_task',None)
+            if select or not path or not Path(path).is_file():
+                selected=filedialog.askopenfilename(title='选择之前输出目录中的任务进度.json',initialdir=self.current_output or None,filetypes=[('任务记录','*.json')])
+                if not selected:return
+                path=Path(selected)
+            task=Task(path);settings=task.state['settings'];config=task.state['config']
+            if task.needs_upload() and not self.variables['key'].get().strip():raise ValueError('请先填写本次使用的ImgBB API Key，再点击继续；密钥不会保存在任务中')
+            self.last_task=Path(path)
+            # Use the original immutable task snapshot rather than newly edited controls.
+            self.active_profile=json.loads(json.dumps(config))
+            key=config['name']+'（任务快照）';self.profile_paths[key]=task.root/task.state.get('config_file','模板配置.json')
+            self.profile_select.configure(values=list(self.profile_paths));self.selected_profile.set(key)
+            self.variables['title'].set(config['title']);self.variables['price'].set(str(config['price']))
+            self.variables['size'].set(str(settings['size']));self.variables['mode'].set(settings['mode'])
+            self.variables['output'].set(str(task.root.parent));self.variables['template'].set(str(task.root/'导入模板.xlsx'))
+            links=self.variables['links'].get().strip()
+            if settings['mode']!='ImgBB 自动上传' and not links:links=str(task.root/'图片链接.csv')
+            values={'key':self.variables['key'].get().strip(),'links':links}
+            self.busy=True;self.run_button.configure(state='disabled');self.scan_button.configure(state='disabled');self.profile_select.configure(state='disabled')
+            self.resume_button.configure(state='disabled');self.load_task_button.configure(state='disabled')
+            self.status_text.set('正在从保存位置继续')
+            self.write('继续任务：'+str(path)+'；沿用该任务模板、价格和输出目录。')
+            threading.Thread(target=self.work,args=(values,None,None,path),daemon=True).start()
+        except Exception as error:messagebox.showerror('无法继续任务',str(error))
 
     def open_output(self):
         if not self.current_output:return
@@ -218,10 +242,17 @@ class App:
                 elif kind=='progress':self.progress_value.set(value)
                 elif kind=='status':
                     self.status_text.set(value)
-                    self.status_label.configure(bg='#863a39' if '失败' in value else '#176459',fg='white')
+                    if '被动中断' in value or '待补链接' in value:self.run_button.configure(text='继续上次中断的任务',command=self.resume_saved)
+                    elif '表格已生成' in value:self.run_button.configure(text='打开已生成表格所在目录',command=self.open_output)
+                    self.status_label.configure(bg='#863a39' if ('失败' in value or '中断' in value) else '#176459',fg='white')
+                elif kind=='task':
+                    self.last_task=Path(value)
+                    try:remember(self.last_task)
+                    except OSError:self.write('无法保存最近任务位置；可手动加载输出目录中的任务进度.json。')
                 elif kind=='output':self.current_output=value;self.open_button.configure(state='normal')
                 elif kind=='done':
                     self.busy=False;self.run_button.configure(state='normal');self.scan_button.configure(state='normal');self.profile_select.configure(state='readonly')
+                    self.resume_button.configure(state='normal' if getattr(self,'last_task',None) else 'disabled');self.load_task_button.configure(state='normal')
         except queue.Empty:pass
         self.window.after(100,self.poll)
 
