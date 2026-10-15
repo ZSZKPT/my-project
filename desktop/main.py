@@ -23,7 +23,7 @@ class App:
             ttk.Button(row,text='选择',command=lambda k=key,f=folder:self.choose(k,f)).pack(side='left')
         for key,label in [('origin','产地'),('price','统一供货价CNY（可留空）')]:
             row=ttk.Frame(frame);row.pack(fill='x',pady=6);ttk.Label(row,text=label,width=25).pack(side='left');ttk.Entry(row,textvariable=self.values[key]).pack(side='left',fill='x',expand=True)
-        ttk.Label(frame,text='留空供货价：保留源表各SKU价格。固定为非定制品、非敏感属性。').pack(anchor='w',pady=5)
+        ttk.Label(frame,text='留空供货价：保留源表各SKU价格。建议售价自动为供货价5倍；非定制品、非敏感属性。').pack(anchor='w',pady=5)
         ttk.Label(frame,text='素材图、颜色图、外包装图片均取源CSV链接，不重传、不替换。颜色图为空时使用源轮播图/预览图。').pack(anchor='w')
         self.scan_button=ttk.Button(frame,text='读取SKU并核对标题',command=self.scan);self.scan_button.pack(anchor='w',pady=8)
         self.canvas=tk.Canvas(frame,height=180);self.canvas.pack(fill='both',expand=True)

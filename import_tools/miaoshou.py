@@ -3,6 +3,7 @@ import csv
 import math
 import re
 from copy import copy
+from decimal import Decimal, ROUND_DOWN
 from pathlib import Path
 from openpyxl import load_workbook
 
@@ -69,11 +70,14 @@ def export(template, rows, output, english_titles, origin='中国-江西省', pr
             colors=r.get('产品轮播图链接','') or r.get('产品预览图链接','')
             if colors:warnings.append('部分颜色图为空，使用源文件轮播图/预览图回填')
         if not colors:raise ValueError('源文件缺少颜色图、轮播图和预览图')
+        price = price_override if price_override is not None else number(match.group(1),'供货价')
+        price = Decimal(str(price)).quantize(Decimal('0.01'), rounding=ROUND_DOWN)
+        suggested = price * 5
         data={'类目ID':category,'* 主编号':r.get('产品ID') or r.get('主货号'),'*产品标题':title,'*英文标题':english,
         '*产地':origin,'制造地点':r.get('制造地点',''),'站外产品链接':r.get('站外产品链接',''),
         '* 产品素材图':r.get('产品素材图链接',''),'*定制品':'否','* 规格名称1':'颜色','* 规格属性值1':specs[0],
         '* 规格名称2':'尺码','* 规格属性值2':specs[1],'* 颜色图':colors,'主货号':r.get('主货号',''),
-        '* 供货价\n（CNY）':price_override if price_override is not None else number(match.group(1),'供货价'),
+        '* 供货价\n（CNY）':float(price),'建议售价\n（（CNY））':float(suggested),
         '* 长（cm）':number(dimensions['长'],'长'),'* 宽（cm）':number(dimensions['宽'],'宽'),'* 高（cm）':number(dimensions['高'],'高'),
         '* 毛重（g）':number(r.get('毛重(g)'),'毛重'),'净重(g)':number(r['净重(g)'],'净重',False) if r.get('净重(g)') else '',
         '平台SKU':r.get('平台SKU',''),'* 是否敏感属性':'否',
