@@ -18,6 +18,7 @@ jobs:
       - run: python -m unittest discover -s tests -p test_desktop.py -v
       - run: python -m unittest discover -s tests -p test_miaoshou.py -v
       - run: python -m unittest discover -s tests -p test_print_names.py -v
+      - run: python -m unittest discover -s tests -p test_pipeline.py -v
       - run: python -m PyInstaller --noconfirm --clean --onefile --windowed --name MiaoshouTemuTool --paths . --add-data "desktop/assets;assets" desktop/main.py
       - name: Smoke test Windows EXE
         run: |

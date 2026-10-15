@@ -1,0 +1,49 @@
+{
+  "name": "运动短袖套装",
+  "title": "女士圆领短袖2件套{print_name}印花圆领T恤+短裤",
+  "english_title": "Women's Crew Neck Printed Short-Sleeve T-Shirt and Shorts Two-Piece Set {sku}",
+  "category_id": "29046",
+  "origin": "中国-江西省",
+  "color": "混合色",
+  "description": "",
+  "packaging_shape": "长方体",
+  "packaging_type": "软包装+软物",
+  "packaging_image": "https://img.cdnfe.com/product/open/ad7a1f90a1b744c08ed8a93b5c0fd982-goods.jpeg",
+  "variants": [
+    {
+      "size": "S",
+      "length_cm": 25,
+      "width_cm": 20,
+      "height_cm": 1,
+      "weight_g": 200
+    },
+    {
+      "size": "M",
+      "length_cm": 25,
+      "width_cm": 20,
+      "height_cm": 1,
+      "weight_g": 200
+    },
+    {
+      "size": "L",
+      "length_cm": 25,
+      "width_cm": 20,
+      "height_cm": 1,
+      "weight_g": 200
+    },
+    {
+      "size": "XL",
+      "length_cm": 25,
+      "width_cm": 20,
+      "height_cm": 1,
+      "weight_g": 200
+    },
+    {
+      "size": "XXL",
+      "length_cm": 25,
+      "width_cm": 20,
+      "height_cm": 1,
+      "weight_g": 200
+    }
+  ]
+}

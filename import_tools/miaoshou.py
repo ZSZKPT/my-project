@@ -40,6 +40,7 @@ def export(template, rows, output, english_titles, origin='中国-江西省', pr
     w=load_workbook(template);s=w['Sheet1']
     headers={str(c.value).strip():c.column for c in s[1] if c.value}
     categories={str(name):str(cid) for cid,name in w['类目ID'].iter_rows(min_row=2,values_only=True) if name}
+    category_ids=set(categories.values())
     needed=['* 主编号','*产品标题','*英文标题','*产地','*定制品','* 是否敏感属性','平台SKU','* 颜色图']
     if any(h not in headers for h in needed):raise ValueError('请选择妙手Temu服饰类官方模板')
     styles={c.column:copy(c._style) for c in s[3]}
@@ -63,7 +64,9 @@ def export(template, rows, output, english_titles, origin='中国-江西省', pr
         package=dict(re.findall(r'(外包装形状|外包装类型|外包装图片链接)\s*[：:]\s*([^\n]+)',r.get('包装信息','')))
         match=re.fullmatch(r'(\d+(?:\.\d+)?)\s*CNY',r.get('供货价',''))
         if price_override is None and not match:raise ValueError('供货价需为CNY，请填写统一价格或修正源文件')
-        category=categories.get(r.get('产品分类',''),'')
+        category=str(r.get('类目ID') or '').strip()
+        if category and category not in category_ids:raise ValueError('模板类目ID不在官方类目表中')
+        category=category or categories.get(r.get('产品分类',''),'')
         if not category:warnings.append('部分商品类目路径未匹配，需在妙手选择类目')
         colors=r.get('产品颜色图链接','')
         if not colors:
@@ -74,7 +77,7 @@ def export(template, rows, output, english_titles, origin='中国-江西省', pr
         price = Decimal(str(price)).quantize(Decimal('0.01'), rounding=ROUND_DOWN)
         suggested = price * 5
         data={'类目ID':category,'* 主编号':r.get('产品ID') or r.get('主货号'),'*产品标题':title,'*英文标题':english,
-        '*产地':origin,'制造地点':r.get('制造地点',''),'站外产品链接':r.get('站外产品链接',''),
+        '产品描述':r.get('产品描述',''),'*产地':origin,'制造地点':r.get('制造地点',''),'站外产品链接':r.get('站外产品链接',''),
         '* 产品素材图':r.get('产品素材图链接',''),'*定制品':'否','* 规格名称1':'颜色','* 规格属性值1':specs[0],
         '* 规格名称2':'尺码','* 规格属性值2':specs[1],'* 颜色图':colors,'主货号':r.get('主货号',''),
         '* 供货价\n（CNY）':float(price),'建议售价\n（（CNY））':float(suggested),

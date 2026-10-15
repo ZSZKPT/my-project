@@ -12,7 +12,9 @@ from tkinter import ttk, filedialog, messagebox
 if __package__ in (None, ''):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from desktop.core import discover, prepare, upload_imgbb, load_profile
-from import_tools.dianxiaomi import export
+from import_tools.miaoshou import export
+from desktop.profiles import load as load_template, storage_dir, products_to_rows
+from desktop.template_editor import open_editor
 from desktop.print_names import read_names, title_for
 
 
@@ -22,22 +24,32 @@ ASSETS = Path(getattr(sys, '_MEIPASS', Path(__file__).resolve().parent)) / 'asse
 class App:
     def __init__(self, window):
         self.window=window
-        window.title('Temu · 店小秘批量导入工具')
-        window.geometry('1000x800')
+        window.title('妙手批量上架助手 · 图片自动处理')
+        window.geometry('1100x900')
         self.events=queue.Queue(); self.groups=[]; self.names=[]; self.busy=False
         self.variables={k:tk.StringVar(value=v) for k,v in {
-            'source':'','output':'','profile':str(ASSETS/'运动短袖短裤套装.xlsx'),'template':str(ASSETS/'店小秘创建商品模板.xlsx'),'price':'',
+            'source':'','output':'','profile':str(ASSETS/'运动短袖套装.json'),'template':str(ASSETS/'妙手Temu服饰模板.xlsx'),'price':'',
             'title':'女士圆领短袖2件套{print_name}印花圆领T恤+短裤',
             'mode':'ImgBB 自动上传','key':'','links':'','size':'1000'}.items()}
+        self.active_profile=load_template(ASSETS/'运动短袖套装.json')
+        self.profile_paths={'运动短袖套装（内置）':ASSETS/'运动短袖套装.json'}
+        self.selected_profile=tk.StringVar(value='运动短袖套装（内置）')
         frame=ttk.Frame(window,padding=16);frame.pack(fill='both',expand=True)
-        ttk.Label(frame,text='选择图片 → 填印花名和申报价 → 处理图片 / 上传 → 导出 Excel',font=('',13,'bold')).pack(anchor='w')
+        ttk.Label(frame,text='选择模板 → 导入图片及印花名 → 自动上传取链接 → 生成妙手表格',font=('',13,'bold')).pack(anchor='w')
+        row=ttk.Frame(frame);row.pack(fill='x',pady=6)
+        ttk.Label(row,text='产品模板',width=26).pack(side='left')
+        self.profile_select=ttk.Combobox(row,textvariable=self.selected_profile,values=list(self.profile_paths),state='readonly');self.profile_select.pack(side='left',fill='x',expand=True)
+        self.profile_select.bind('<<ComboboxSelected>>',self.select_template)
+        ttk.Button(row,text='编辑 / 另存模板',command=self.edit_template).pack(side='left')
+        ttk.Button(row,text='导入模板JSON',command=self.import_template).pack(side='left')
+        self.refresh_templates()
         self.controls=[]
-        for key,label,folder in [('source','图片目录',True),('output','输出目录',True),('profile','商品模板（商品导出表）',False),('template','创建商品导入模板',False)]:
+        for key,label,folder in [('source','图片目录',True),('output','输出目录',True),('template','创建商品导入模板',False)]:
             row=ttk.Frame(frame);row.pack(fill='x',pady=4)
             ttk.Label(row,text=label,width=26).pack(side='left')
             ttk.Entry(row,textvariable=self.variables[key]).pack(side='left',fill='x',expand=True)
             button=ttk.Button(row,text='选择',command=lambda k=key,f=folder:self.choose(k,f));button.pack(side='left');self.controls.append(button)
-        for key,label in [('title','标题规则（含 {print_name}）'),('price','统一申报价（店铺币种）')]:
+        for key,label in [('title','标题规则（含 {print_name}）'),('price','统一申报价CNY（建议售价自动5倍）')]:
             row=ttk.Frame(frame);row.pack(fill='x',pady=4);ttk.Label(row,text=label,width=26).pack(side='left');ttk.Entry(row,textvariable=self.variables[key]).pack(side='left',fill='x',expand=True)
         row=ttk.Frame(frame);row.pack(fill='x',pady=4)
         ttk.Label(row,text='素材图尺寸',width=26).pack(side='left');ttk.Combobox(row,textvariable=self.variables['size'],values=['800','1000','1200'],state='readonly',width=10).pack(side='left')
@@ -53,10 +65,55 @@ class App:
         self.table=ttk.Frame(self.canvas);self.canvas.create_window((0,0),window=self.table,anchor='nw')
         scrollbar=ttk.Scrollbar(frame,orient='vertical',command=self.canvas.yview);scrollbar.pack(side='right',fill='y');self.canvas.configure(yscrollcommand=scrollbar.set)
         self.table.bind('<Configure>',lambda e:self.canvas.configure(scrollregion=self.canvas.bbox('all')))
-        self.run_button=ttk.Button(frame,text='开始处理 / 生成 Excel',command=self.start);self.run_button.pack(anchor='w',pady=6)
+        self.run_button=ttk.Button(frame,text='自动处理 / 上传 / 生成妙手表格',command=self.start);self.run_button.pack(anchor='w',pady=6)
         self.log=tk.Text(frame,height=9,state='disabled');self.log.pack(fill='x')
-        ttk.Label(frame,text='导入创建新商品，不复制类目属性或尺码表，也不自动发布。原文件不会覆盖。').pack(anchor='w')
+        ttk.Label(frame,text='生成后到妙手批量手动导入、选择尺码表及属性并发布。原文件不覆盖。').pack(anchor='w')
+        ttk.Button(frame,text='已有SKU CSV转换工具',command=self.csv_tool).pack(anchor='w',pady=4)
         window.after(100,self.poll)
+
+    def refresh_templates(self):
+        directory=storage_dir()
+        if directory.exists():
+            for path in sorted(directory.glob('*.json')):
+                try:
+                    profile=load_template(path)
+                    self.profile_paths[profile['name']+' · '+path.stem[-8:]]=path
+                except (ValueError, OSError):continue
+        self.profile_select.configure(values=list(self.profile_paths))
+
+    def select_template(self,event=None):
+        if self.busy:return
+        try:
+            path=self.profile_paths[self.selected_profile.get()]
+            self.active_profile=load_template(path)
+            self.variables['profile'].set(str(path));self.variables['title'].set(self.active_profile['title'])
+            self.write('已选择模板：'+self.active_profile['name'])
+        except Exception as error:messagebox.showerror('模板加载失败',str(error))
+
+    def edit_template(self):
+        if self.busy:return
+        config=json.loads(json.dumps(self.active_profile));config['title']=self.variables['title'].get()
+        open_editor(self.window,config,storage_dir(),self.template_saved)
+
+    def template_saved(self,path,profile):
+        self.refresh_templates()
+        key=profile['name']+' · '+path.stem[-8:]
+        self.profile_paths[key]=path;self.profile_select.configure(values=list(self.profile_paths));self.selected_profile.set(key)
+        self.select_template()
+
+    def import_template(self):
+        if self.busy:return
+        try:
+            path=filedialog.askopenfilename(filetypes=[('模板JSON','*.json')])
+            if not path:return
+            profile=load_template(path)
+            from desktop.profiles import save
+            saved=save(storage_dir(),profile);self.template_saved(saved,profile)
+        except Exception as error:messagebox.showerror('模板导入失败',str(error))
+
+    def csv_tool(self):
+        from desktop.main import App as CsvApp
+        CsvApp(tk.Toplevel(self.window))
 
     def choose(self,key,folder):
         if self.busy:return
@@ -67,7 +124,7 @@ class App:
         if self.busy:return
         try:
             old={g['sku']:v.get() for g,v in zip(self.groups,self.names)}
-            self.groups=discover(self.variables['source'].get());self.names=[]
+            self.groups=discover(self.variables['source'].get());self.scanned_source=Path(self.variables['source'].get()).resolve();self.names=[]
             for child in self.table.winfo_children():child.destroy()
             for i,g in enumerate(self.groups):
                 ttk.Label(self.table,text=f'{g["sku"]}  ({len(g["files"])}张)',width=45).grid(row=i,column=0,sticky='w')
@@ -96,14 +153,19 @@ class App:
         try:
             values={k:v.get().strip() for k,v in self.variables.items()}
             if not self.groups or any(not v.get().strip() for v in self.names):raise ValueError('先扫描并填写所有印花名称')
+            if Path(values['source']).resolve()!=self.scanned_source:raise ValueError('图片目录已变化，请重新扫描')
             price=float(values['price'])
             if not math.isfinite(price) or price<=0:raise ValueError('请填写正数申报价')
             if not values['output']:raise ValueError('请选择输出目录')
-            config=load_profile(values['profile']);config['title']=values['title']
+            if Path(values['output']).resolve().is_relative_to(self.scanned_source):raise ValueError('输出目录必须在图片输入目录之外，避免重复扫描生成图片')
+            config=json.loads(json.dumps(self.active_profile));config['title']=values['title']
             if '{print_name}' not in config['title']:raise ValueError('标题规则必须包含 {print_name}')
             titles=[title_for(config['title'],v.get().strip(),g['sku']) for g,v in zip(self.groups,self.names)]
             if len(titles)!=len(set(titles)):raise ValueError('不同货号生成了相同标题，请使用不同印花名或增加 {sku}')
-            for v in config['variants']:v['price']=price
+            config['price']=price
+            from desktop.profiles import validate
+            validate(config)
+            if any(len(g['files'])>10 for g in self.groups):raise ValueError('单个货号超过10张，请先移除多余轮播图')
             if not Path(values['template']).is_file():raise ValueError('请选择官方创建商品导入模板')
             if values['mode']=='ImgBB 自动上传':
                 if not values['key']:raise ValueError('请输入 ImgBB API Key')
@@ -115,7 +177,7 @@ class App:
 
     def work(self,values,config,groups):
         try:
-            out=Path(values['output'])/('店小秘_'+datetime.now().strftime('%Y%m%d_%H%M%S_%f'));out.mkdir(parents=True,exist_ok=False)
+            out=Path(values['output'])/('妙手_'+datetime.now().strftime('%Y%m%d_%H%M%S_%f'));out.mkdir(parents=True,exist_ok=False)
             self.events.put(('log',f'输出目录：{out}'))
             link_rows={}
             if values['links']:
@@ -142,9 +204,12 @@ class App:
                     writer.writerow(row);f.flush();products.append(row)
             (out/'模板配置.json').write_text(json.dumps(config,ensure_ascii=False,indent=2),encoding='utf-8')
             if all(p['carousel_urls'] and p['material_url'] for p in products):
-                count=export(values['template'],config,products,out/'店小秘导入.xlsx');self.events.put(('log',f'已生成 Excel：{count} 行 SKU，需在店小秘测试导入。'))
-            else:self.events.put(('log','尚缺在线链接：已生成图片和图片链接.csv。上传后填写链接表，下次选择该 CSV 再生成 Excel。'))
-            self.events.put(('log','完成。请核对主图排序、素材裁切和价格；尚未发布商品。'))
+                rows,titles=products_to_rows(config,products,config['price'])
+                result=export(values['template'],rows,out/'妙手导入.xlsx',titles,config['origin'])
+                self.events.put(('log',f'已生成妙手 Excel：{result["product_count"]}个商品，{result["sku_count"]}行SKU；建议售价=申报价5倍。'))
+                for warning in result['warnings']:self.events.put(('log','提示：'+warning))
+                self.events.put(('log','表格已生成，待手动导入。请在妙手批量选择尺码表、补充属性并确认发布。'))
+            else:self.events.put(('log','尚缺在线链接：已生成图片和图片链接.csv。上传后填写链接表，下次选择该CSV再生成Excel。'))
         except Exception as error:self.events.put(('log',f'处理停止：{error}。已生成文件保留；已上传图片不会自动删除。'))
         finally:self.events.put(('done',None))
 

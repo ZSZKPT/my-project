@@ -38,7 +38,7 @@ class App:
         self.run=ttk.Button(frame,text='生成妙手上传表格',command=self.start);self.run.pack(anchor='w',pady=10)
         self.log=tk.Text(frame,height=9,state='disabled');self.log.pack(fill='x')
         ttk.Label(frame,text='本工具生成批量导入文件；不会登录妙手、提交发布或补造尺码测量表及类目属性。').pack(anchor='w',pady=5)
-        ttk.Button(frame,text='本地图片处理 / 原套装工具',command=self.local).pack(anchor='w')
+        ttk.Button(frame,text='图片自动上传 / 妙手多模板工具',command=self.local).pack(anchor='w')
         window.after(100,self.poll)
 
     def local(self):
@@ -123,7 +123,9 @@ class App:
         self.window.after(100,self.poll)
 
 if __name__=='__main__':
-    root=tk.Tk();App(root)
+    root=tk.Tk()
+    from desktop.legacy import App as ImageApp
+    ImageApp(root)
     if '--self-test' in sys.argv:
         root.withdraw();root.update()
         from openpyxl import load_workbook
