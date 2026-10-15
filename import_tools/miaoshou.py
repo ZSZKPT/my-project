@@ -52,7 +52,7 @@ def export(template, rows, output, english_titles, origin='中国-江西省', pr
             c.value=None
     seen=set();warnings=[]
     for index,r in enumerate(rows,3):
-        title=r.get('产品名称','').strip();english=english_titles.get(title,'').strip()
+        title=r.get('产品名称','').strip();english=(r.get('英文标题') or english_titles.get(title,'')).strip()
         if not english:raise ValueError(f'请填写英文标题：{title}')
         specs=r.get('产品规格','').split('|')
         if len(specs)!=2 or not all(specs):raise ValueError('产品规格必须为 颜色|尺码')

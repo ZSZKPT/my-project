@@ -80,7 +80,6 @@ class App:
             matched={r['主货号'] for r in self.rows if r['主货号'] in mapping}
             if not matched:raise ValueError('没有匹配的货号')
             updates={sku:title_for(rule,mapping[sku],sku) for sku in matched}
-            if len(set(updates.values()))!=len(updates):raise ValueError('不同货号生成同名标题，请增加 {sku} 或使用不同印花名')
             if not messagebox.askyesno('确认替换标题',f'按标题规则替换 {len(matched)} 个货号的中文标题，英文标题需重新核对。是否继续？'):return
             old={k:v.get() for k,v in self.names.items()}
             for r in self.rows:

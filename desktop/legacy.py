@@ -136,7 +136,6 @@ class App:
             config=json.loads(json.dumps(self.active_profile));config['title']=values['title']
             if '{print_name}' not in config['title']:raise ValueError('标题规则必须包含 {print_name}')
             titles=[title_for(config['title'],v.get().strip(),g['sku']) for g,v in zip(self.groups,self.names)]
-            if len(titles)!=len(set(titles)):raise ValueError('不同货号生成了相同标题，请使用不同印花名或增加 {sku}')
             config['price']=price
             from desktop.profiles import validate
             validate(config)

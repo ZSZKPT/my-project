@@ -32,7 +32,7 @@ class PipelineTest(unittest.TestCase):
                 folder=source/sku;folder.mkdir(parents=True)
                 for name in (sku+'-后.jpg',sku+'-前.jpg'):Image.new('RGB',(1200,1600),'red').save(folder/name)
             groups=discover(source)
-            for group,name in zip(groups,['字母印花','爱心']):group['print_name']=name
+            for group,name in zip(groups,['字母印花','字母印花']):group['print_name']=name
             profile=load(ASSETS/'运动短袖套装.json');profile['price']=29
             app=App.__new__(App);app.events=queue.Queue()
             values={'output':str(root/'output'),'size':'1000','mode':'ImgBB 自动上传','links':'','key':'TEST-NOT-A-CREDENTIAL','template':str(ASSETS/'妙手Temu服饰模板.xlsx')}
@@ -47,6 +47,11 @@ class PipelineTest(unittest.TestCase):
             self.assertEqual(len(rows),10)
             self.assertEqual(rows[0]['*产品标题'],'女士圆领短袖2件套字母印花圆领T恤+短裤')
             self.assertEqual(rows[-1]['平台SKU'],'DEF-XXL')
+            self.assertEqual(rows[0]['*产品标题'],rows[-1]['*产品标题'])
+            self.assertEqual({r['* 主编号'] for r in rows},{'ABC','DEF'})
+            self.assertTrue(rows[0]['*英文标题'].endswith('ABC'))
+            self.assertTrue(rows[-1]['*英文标题'].endswith('DEF'))
+            self.assertNotEqual(rows[0]['* 颜色图'],rows[-1]['* 颜色图'])
             for row in rows:
                 self.assertEqual(row['类目ID'],'29046')
                 self.assertEqual(row['* 供货价\n（CNY）'],29)

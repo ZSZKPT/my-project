@@ -50,7 +50,6 @@ def products_to_rows(profile,products,price):
         if not sku or not name or sku in seen:raise ValueError('货号、印花名不能为空，货号不得重复')
         seen.add(sku)
         title=title_for(profile['title'],name,sku)
-        if title in titles:raise ValueError('不同货号标题相同，请修改印花名或在规则里加入 {sku}')
         english=profile['english_title'].replace('{sku}',sku)
         titles[title]=english
         images=product['carousel_urls'].split('|')
@@ -59,7 +58,7 @@ def products_to_rows(profile,products,price):
         for url in images:image_url(url)
         image_url(product['material_url'])
         for variant in profile['variants']:
-            rows.append({'产品ID':sku,'产品名称':title,'类目ID':profile['category_id'],'主货号':sku,
+            rows.append({'产品ID':sku,'产品名称':title,'英文标题':english,'类目ID':profile['category_id'],'主货号':sku,
             '产品规格':profile['color']+'|'+str(variant['size']),'供货价':str(price)+'CNY',
             '尺寸':f'长：{variant["length_cm"]},宽：{variant["width_cm"]},高：{variant["height_cm"]}',
             '毛重(g)':str(variant['weight_g']),'净重(g)':str(variant.get('net_weight_g') or ''),
