@@ -16,6 +16,7 @@ from import_tools.miaoshou import export
 from desktop.profiles import load as load_template, storage_dir, products_to_rows
 from desktop.template_editor import open_editor
 from desktop.print_names import read_names, title_for
+from desktop.thumbnails import add_thumbnail
 
 
 ASSETS = Path(getattr(sys, '_MEIPASS', Path(__file__).resolve().parent)) / 'assets'
@@ -26,7 +27,7 @@ class App:
         self.window=window
         window.title('妙手批量上架助手 · 图片自动处理')
         window.geometry('1100x900')
-        self.events=queue.Queue(); self.groups=[]; self.names=[]; self.busy=False
+        self.events=queue.Queue(); self.groups=[]; self.names=[]; self.busy=False; self.thumbnails={}
         self.variables={k:tk.StringVar(value=v) for k,v in {
             'source':'','output':'','profile':str(ASSETS/'运动短袖套装.json'),'template':str(ASSETS/'妙手Temu服饰模板.xlsx'),'price':'',
             'title':'女士圆领短袖2件套{print_name}印花圆领T恤+短裤',
@@ -95,10 +96,13 @@ class App:
             old={g['sku']:v.get() for g,v in zip(self.groups,self.names)}
             self.groups=discover(self.variables['source'].get());self.scanned_source=Path(self.variables['source'].get()).resolve();self.names=[]
             for child in self.table.winfo_children():child.destroy()
+            self.thumbnails={}
+            self.table.columnconfigure(1,weight=1);self.table.columnconfigure(2,weight=1)
             for i,g in enumerate(self.groups):
-                ttk.Label(self.table,text=f'{g["sku"]}  ({len(g["files"])}张)',style='Card.TLabel',width=29,wraplength=230).grid(row=i,column=0,sticky='w')
+                add_thumbnail(self,g,i)
+                ttk.Label(self.table,text=f'{g["sku"]}\n{len(g["files"])} 张图片',style='Card.TLabel',width=20,wraplength=180).grid(row=i,column=1,sticky='w',padx=(0,8))
                 variable=tk.StringVar(value=old.get(g['sku'],''));self.names.append(variable)
-                ttk.Entry(self.table,textvariable=variable,width=26).grid(row=i,column=1,pady=2)
+                ttk.Entry(self.table,textvariable=variable,width=20).grid(row=i,column=2,pady=8,padx=(0,8),sticky='ew')
             self.counts_text.set(f'{len(self.groups)} 个货号 · {sum(len(g["files"]) for g in self.groups)} 张图片')
             self.status_text.set('待填写印花名称')
             self.write('扫描完成，请逐行填写印花名称。')

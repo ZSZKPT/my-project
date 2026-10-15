@@ -125,11 +125,25 @@ class App:
 if __name__=='__main__':
     root=tk.Tk()
     from desktop.legacy import App as ImageApp
-    ImageApp(root)
+    image_app=ImageApp(root)
     if '--self-test' in sys.argv:
         root.withdraw();root.update()
         from openpyxl import load_workbook
         book=load_workbook(ASSETS/'妙手Temu服饰模板.xlsx',read_only=True)
         assert 'Sheet1' in book.sheetnames
-        book.close();root.destroy()
+        book.close()
+        import tempfile
+        from PIL import Image
+        from desktop.thumbnails import open_preview
+        with tempfile.TemporaryDirectory() as temp:
+            folder=Path(temp)/'TEST-THUMB';folder.mkdir()
+            Image.new('RGB',(600,800),'#087f8c').save(folder/'TEST-THUMB-前.jpg')
+            image_app.variables['source'].set(str(folder));image_app.scan();root.update()
+            assert len(image_app.thumbnails)==1
+            assert len(image_app.names)==1
+            image_app.names[0].set('缩略图测试')
+            preview=open_preview(root,folder/'TEST-THUMB-前.jpg','TEST-THUMB');root.update()
+            assert preview is not None
+            preview.destroy()
+        root.destroy()
     else:root.mainloop()
