@@ -1,0 +1,28 @@
+{
+  "sku": "YQ-WK-YLDXTZ4-101",
+  "category_id": "29046",
+  "order": [
+    "YQ-WK-YLDXTZ4-101-前.jpg",
+    "YQ-WK-YLDXTZ4-101-前1.jpg",
+    "YQ-WK-YLDXTZ4-101-后.jpg",
+    "YQ-WK-YLDXTZ4-101-细节1.jpg",
+    "YQ-WK-YLDXTZ4-101-细节2.jpg"
+  ],
+  "sizes": [
+    "S",
+    "M",
+    "L",
+    "XL",
+    "XXL"
+  ],
+  "material_size": [
+    1000,
+    1000
+  ],
+  "missing": [
+    "印花名称",
+    "统一申报价",
+    "5张商品图和素材图在线链接"
+  ],
+  "workbook": "妙手测试表_101_待补价格和图片链接.xlsx"
+}
