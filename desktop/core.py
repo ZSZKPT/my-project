@@ -22,7 +22,8 @@ def natural_key(name):
     return [int(p) if p.isdigit() else p.casefold() for p in re.split(r'(\d+)', name)]
 
 
-def discover(source):
+def discover(source, main_suffix="前"):
+    main_suffix = main_suffix.strip().casefold()
     source = Path(source).resolve()
     if not source.is_dir():
         raise ValueError('请选择图片目录')
@@ -30,7 +31,7 @@ def discover(source):
     groups = []
     for folder in folders:
         files = [p for p in folder.iterdir() if p.is_file() and not p.is_symlink() and p.suffix.lower() in IMAGE_TYPES and '素材图' not in p.stem]
-        files.sort(key=lambda p: ('前' not in p.stem, natural_key(p.stem)))
+        files.sort(key=lambda p: (not (main_suffix and p.stem.casefold().endswith(main_suffix)), natural_key(p.stem)))
         if files:
             groups.append({'sku':folder.name, 'files':files})
     if not groups:

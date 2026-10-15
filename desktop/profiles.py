@@ -6,7 +6,7 @@ from desktop.print_names import title_for
 from import_tools.miaoshou import number
 from import_tools.image_rules import validate_urls
 
-FIELDS=('name','title','english_title','category_id','origin','color','description','packaging_shape','packaging_type','packaging_image','variants')
+FIELDS=('main_suffix','name','title','english_title','category_id','origin','color','description','packaging_shape','packaging_type','packaging_image','variants')
 
 
 def storage_dir():
@@ -14,6 +14,7 @@ def storage_dir():
 
 
 def validate(profile):
+    if not isinstance(profile.get("main_suffix", "前"),str):raise ValueError("主图后缀必须为文字")
     for key in ('name','title','english_title','category_id','origin','color'):
         if not isinstance(profile.get(key),str) or not profile[key].strip():raise ValueError(f'模板字段 {key} 不能为空')
     title_for(profile['title'],'测试','TEST')

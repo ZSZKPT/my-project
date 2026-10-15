@@ -8,10 +8,10 @@ from desktop.profiles import validate, save
 def open_editor(parent,current,directory,on_saved):
     window=tk.Toplevel(parent);window.title('飞凡上架 · 另存为产品模板');window.geometry('900x780')
     base=copy.deepcopy(current);entries={}
-    labels={'name':'模板名称','title':'中文标题规则（含 {print_name}，可加 {sku}）','english_title':'英文标题规则（可加 {sku}）','category_id':'Temu类目ID','origin':'产地','color':'颜色','description':'共用描述','packaging_shape':'外包装形状','packaging_type':'外包装类型','packaging_image':'固定包装图片链接'}
+    labels={'name':'模板名称','main_suffix':'主图文件名后缀（不含扩展名，可留空）','title':'中文标题规则（含 {print_name}，可加 {sku}）','english_title':'英文标题规则（可加 {sku}）','category_id':'Temu类目ID','origin':'产地','color':'颜色','description':'共用描述','packaging_shape':'外包装形状','packaging_type':'外包装类型','packaging_image':'固定包装图片链接'}
     for row,(key,label) in enumerate(labels.items()):
         ttk.Label(window,text=label).grid(row=row,column=0,sticky='w',padx=10,pady=5)
-        var=tk.StringVar(value=str(base.get(key,'')));entries[key]=var
+        var=tk.StringVar(value=str(base.get(key,'前' if key=='main_suffix' else '')));entries[key]=var
         ttk.Entry(window,textvariable=var,width=70).grid(row=row,column=1,sticky='ew',padx=10)
     row=len(labels)
     ttk.Label(window,text='尺码参数JSON：size、length_cm、width_cm、height_cm、weight_g，可选net_weight_g').grid(row=row,column=0,columnspan=2,sticky='w',padx=10,pady=6)

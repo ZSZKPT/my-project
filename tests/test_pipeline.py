@@ -18,11 +18,12 @@ class PipelineTest(unittest.TestCase):
         profile=load(ASSETS/'运动短袖套装.json')
         with tempfile.TemporaryDirectory() as d:
             first=save(d,profile)
-            second_profile=dict(profile,name='运动套装二',category_id='29046',key='not-a-real-key')
+            second_profile=dict(profile,name='运动套装二',category_id='29046',main_suffix='主图',key='not-a-real-key')
             second=save(d,second_profile)
             self.assertNotEqual(first,second)
             self.assertEqual(load(first)['name'],'运动短袖套装')
             self.assertEqual(load(second)['name'],'运动套装二')
+            self.assertEqual(load(second)['main_suffix'],'主图')
             self.assertNotIn('not-a-real-key',second.read_text(encoding='utf-8'))
             self.assertEqual(len(list(Path(d).glob('*.json'))),2)
 

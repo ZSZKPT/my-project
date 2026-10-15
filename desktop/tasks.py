@@ -79,7 +79,7 @@ class Task:
         root=Path(values['output'])/('妙手_'+datetime.now().strftime('%Y%m%d_%H%M%S_%f'));root.mkdir(parents=True,exist_ok=False)
         shutil.copy2(values['template'],root/'导入模板.xlsx')
         atomic_json(root/'模板配置.json',config)
-        state={'version':1,'status':'pending','config':config,'settings':{key:values.get(key,'') for key in ('source','mode','size','links')},
+        state={'version':1,'status':'pending','config':config,'settings':{key:values.get(key,'') for key in ('source','mode','size','links','main_suffix')},
                'groups':[{'sku':g['sku'],'print_name':g['print_name'],'sources':[str(Path(p).resolve()) for p in g['files']],'prepared':None,'urls':{}} for g in groups]}
         atomic_json(root/'任务进度.json',state)
         return cls(root/'任务进度.json',emit,gate)
@@ -95,7 +95,7 @@ class Task:
         with task_lock(root):
             with links.open(encoding='utf-8-sig',newline='') as file:records={row['sku']:row for row in csv.DictReader(file)}
             if set(records)-{g['sku'] for g in groups}:raise ValueError('请先扫描完整原始图片目录；旧输出中的部分货号未在当前列表中')
-            state={'version':1,'status':'interrupted','config':config,'settings':{key:values.get(key,'') for key in ('source','mode','size','links')},'groups':[],'config_file':'续作模板配置.json'}
+            state={'version':1,'status':'interrupted','config':config,'settings':{key:values.get(key,'') for key in ('source','mode','size','links','main_suffix')},'groups':[],'config_file':'续作模板配置.json'}
             for group in groups:
                 sku=group['sku'];target=root/sku
                 if target.resolve().parent!=root:raise ValueError('货号路径无效')

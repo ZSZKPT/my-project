@@ -19,6 +19,20 @@ class DesktopTest(unittest.TestCase):
             self.assertEqual(len(ready['carousel']),5)
             with self.assertRaises(FileExistsError):prepare(groups[0],root/'out')
 
+    def test_custom_main_suffix_drives_crop(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d);source=root/'SKU';source.mkdir()
+            for name,color in [('01.jpg','red'),('02-main.jpg','blue'),('03-main-detail.jpg','green')]:
+                Image.new('RGB',(100,120),color).save(source/name)
+            group=discover(source,'-MAIN')[0]
+            self.assertEqual(group['files'][0].name,'02-main.jpg')
+            ready=prepare(group,root/'output',800)
+            with Image.open(ready['material']) as image:
+                self.assertEqual(image.size,(800,800))
+                self.assertGreater(image.getpixel((400,400))[2],240)
+            for suffix in ('','missing'):
+                self.assertEqual(discover(source,suffix)[0]['files'][0].name,'01.jpg')
+
     def test_bundled_suit_to_excel(self):
         from desktop.core import load_profile
         from import_tools.dianxiaomi import export

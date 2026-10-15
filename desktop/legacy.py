@@ -31,7 +31,7 @@ class App:
         self.variables={k:tk.StringVar(value=v) for k,v in {
             'source':'','output':'','profile':str(ASSETS/'运动短袖套装.json'),'template':str(ASSETS/'妙手Temu服饰模板.xlsx'),'price':'',
             'title':'女士圆领短袖2件套{print_name}印花圆领T恤+短裤',
-            'mode':'ImgBB 自动上传','key':'','links':'','size':'1000'}.items()}
+            'mode':'ImgBB 自动上传','key':'','links':'','size':'1000','main_suffix':'前'}.items()}
         self.active_profile=load_template(ASSETS/'运动短袖套装.json')
         self.profile_paths={'运动短袖套装（内置）':ASSETS/'运动短袖套装.json'}
         self.selected_profile=tk.StringVar(value='运动短袖套装（内置）')
@@ -67,12 +67,13 @@ class App:
             path=self.profile_paths[self.selected_profile.get()]
             self.active_profile=load_template(path)
             self.variables['profile'].set(str(path));self.variables['title'].set(self.active_profile['title'])
+            self.variables['main_suffix'].set(self.active_profile.get('main_suffix','前'))
             self.write('已选择模板：'+self.active_profile['name'])
         except Exception as error:messagebox.showerror('模板加载失败',str(error))
 
     def edit_template(self):
         if self.busy:return
-        config=json.loads(json.dumps(self.active_profile));config['title']=self.variables['title'].get()
+        config=json.loads(json.dumps(self.active_profile));config['title']=self.variables['title'].get();config['main_suffix']=self.variables['main_suffix'].get().strip()
         open_editor(self.window,config,storage_dir(),self.template_saved)
 
     def template_saved(self,path,profile):
@@ -104,7 +105,8 @@ class App:
         if self.busy:return
         try:
             old={g['sku']:v.get() for g,v in zip(self.groups,self.names)}
-            self.groups=discover(self.variables['source'].get());self.scanned_source=Path(self.variables['source'].get()).resolve();self.names=[]
+            self.scanned_main_suffix=self.variables['main_suffix'].get().strip()
+            self.groups=discover(self.variables['source'].get(),self.scanned_main_suffix);self.scanned_source=Path(self.variables['source'].get()).resolve();self.names=[]
             for child in self.table.winfo_children():child.destroy()
             self.thumbnails={}
             self.table.columnconfigure(1,weight=1);self.table.columnconfigure(2,weight=1)
@@ -139,10 +141,11 @@ class App:
             values={k:v.get().strip() for k,v in self.variables.items()}
             if not self.groups or any(not v.get().strip() for v in self.names):raise ValueError('先扫描并填写所有印花名称')
             if Path(values['source']).resolve()!=self.scanned_source:raise ValueError('图片目录已变化，请重新扫描')
+            if values.get('main_suffix','前')!=getattr(self,'scanned_main_suffix','前'):raise ValueError('主图后缀已变化，请重新扫描确认主图')
             price=parse_price(values['price'])
             if not values['output']:raise ValueError('请选择输出目录')
             if Path(values['output']).resolve().is_relative_to(self.scanned_source):raise ValueError('输出目录必须在图片输入目录之外，避免重复扫描生成图片')
-            config=json.loads(json.dumps(self.active_profile));config['title']=values['title']
+            config=json.loads(json.dumps(self.active_profile));config['title']=values['title'];config['main_suffix']=values.get('main_suffix','前')
             if '{print_name}' not in config['title']:raise ValueError('标题规则必须包含 {print_name}')
             titles=[title_for(config['title'],v.get().strip(),g['sku']) for g,v in zip(self.groups,self.names)]
             config['price']=price
@@ -169,7 +172,7 @@ class App:
         try:
             if not self.groups or any(not var.get().strip() for var in self.names):raise ValueError('先扫描原始图片目录并填写/导入印花名，再接续旧版输出')
             values={key:var.get().strip() for key,var in self.variables.items()}
-            config=json.loads(json.dumps(self.active_profile));config['title']=values['title'];config['price']=parse_price(values['price'])
+            config=json.loads(json.dumps(self.active_profile));config['title']=values['title'];config['main_suffix']=values.get('main_suffix','前');config['price']=parse_price(values['price'])
             from desktop.profiles import validate
             validate(config)
             directory=filedialog.askdirectory(title='选择旧版失败任务的输出目录（包含图片链接.csv）')
@@ -241,6 +244,7 @@ class App:
             key=config['name']+'（任务快照）';self.profile_paths[key]=task.root/task.state.get('config_file','模板配置.json')
             self.profile_select.configure(values=list(self.profile_paths));self.selected_profile.set(key)
             self.variables['title'].set(config['title']);self.variables['price'].set(str(config['price']))
+            self.variables['main_suffix'].set(settings.get('main_suffix',config.get('main_suffix','前')))
             self.variables['size'].set(str(settings['size']));self.variables['mode'].set(settings['mode'])
             self.variables['output'].set(str(task.root.parent));self.variables['template'].set(str(task.root/'导入模板.xlsx'))
             links=self.variables['links'].get().strip()
