@@ -1,0 +1,13 @@
+{
+  "timezone": "Asia/Shanghai",
+  "maxScrolls": 4,
+  "maxProductsPerTarget": 120,
+  "targets": [
+    {"id":"temu-634418225434900","platform":"Temu","name":"Temu 店铺 634418225434900","site":"US","siteNote":"采集按美国地区请求；页面实际地区未经确认时不视为已验证","url":"https://www.temu.com/mall.html?_bg_fs=1&mall_id=634418225434900"},
+    {"id":"shein-6425469218","platform":"SHEIN","name":"SHEIN 美国店铺 6425469218","site":"US","url":"https://us.shein.com/store/home?store_code=6425469218"},
+    {"id":"litb-print-top","platform":"LightInTheBox","name":"关键词：print top","site":"US","url":"https://www.lightinthebox.com/search?q=print+top"},
+    {"id":"pin-wallpaper","platform":"Pinterest","name":"关键词：wallpaper","site":"US","keyword":"wallpaper","url":"https://www.pinterest.com/search/pins/?q=wallpaper"},
+    {"id":"pin-seamless","platform":"Pinterest","name":"关键词：seamless pattern","site":"US","keyword":"seamless pattern","url":"https://www.pinterest.com/search/pins/?q=seamless%20pattern"},
+    {"id":"pin-surface-design","platform":"Pinterest","name":"关键词：surface pattern design","site":"US","keyword":"surface pattern design","url":"https://www.pinterest.com/search/pins/?q=surface%20pattern%20design"}
+  ]
+}

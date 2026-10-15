@@ -1,0 +1,8 @@
+{
+  "name": "feifan-daily-selection-collector",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {"collect": "node collect.mjs", "test": "node --test core.test.mjs"},
+  "dependencies": {"playwright": "1.62.1", "robots-parser": "3.0.1"}
+}

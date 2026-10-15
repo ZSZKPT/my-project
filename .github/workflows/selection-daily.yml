@@ -1,0 +1,88 @@
+name: Daily Selection Collection
+on:
+  schedule:
+    - cron: '0 1 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['selection-crawler/**', '.github/workflows/selection-daily.yml']
+concurrency:
+  group: daily-selection
+  cancel-in-progress: false
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: selection-crawler/package-lock.json
+      - run: npm ci
+        working-directory: selection-crawler
+      - run: npm test
+        working-directory: selection-crawler
+      - run: npx playwright install --with-deps chromium
+        working-directory: selection-crawler
+      - name: Collect public results
+        id: crawl
+        continue-on-error: true
+        run: npm run collect
+        working-directory: selection-crawler
+      - name: Persist public results and failure report
+        run: |
+          test -f selection/data/latest.json
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add selection/data/latest.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'Update daily public selection results [skip ci]'
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+      - name: Flag incomplete collection
+        if: steps.crawl.outcome != 'success'
+        run: echo '::warning::No target collected successfully. Inspect latest.json and the job summary; prior products were preserved.'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Daily-Selection-Web
+          path: selection/
+          if-no-files-found: error
+  publish:
+    needs: collect
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: Daily-Selection-Web
+          path: public
+      - uses: actions/configure-pages@v5
+        id: pages
+        continue-on-error: true
+      - uses: actions/upload-pages-artifact@v3
+        if: steps.pages.outcome == 'success'
+        with:
+          path: public
+      - uses: actions/deploy-pages@v4
+        if: steps.pages.outcome == 'success'
+        id: deployment
+      - name: Explain missing Pages configuration
+        if: steps.pages.outcome != 'success'
+        run: |
+          echo '::warning::Pages is not configured. In repository Settings > Pages choose Source: GitHub Actions, then rerun this workflow.'
+          echo '## Website not published' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Open repository Settings > Pages and select GitHub Actions as Source, then rerun. The scheduled collector and downloadable artifact are separate from website publication.' >> "$GITHUB_STEP_SUMMARY"

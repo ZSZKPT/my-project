@@ -23,6 +23,7 @@ jobs:
           Path('/tmp/selection.js').write_text(re.search(r'<script>(.*?)</script>',html,re.S).group(1),encoding='utf-8')
           PY
           node --check /tmp/selection.js
+          node --check selection/sync.js
       - uses: actions/upload-artifact@v4
         with:
           name: Feifan-Selection-Web
