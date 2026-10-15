@@ -12,11 +12,11 @@ ASSETS=Path(getattr(sys,'_MEIPASS',Path(__file__).resolve().parent))/'assets'
 
 class App:
     def __init__(self,window):
-        self.window=window;window.title('妙手批量上架助手 · Temu服饰');window.geometry('1100x760')
+        self.window=window;window.title('飞凡上架 · Temu服饰');window.geometry('1100x760')
         self.rows=[];self.names={};self.events=queue.Queue();self.busy=False
         self.values={k:tk.StringVar(value=v) for k,v in {'source':'','output':'','template':str(ASSETS/'妙手Temu服饰模板.xlsx'),'origin':'中国-江西省','price':'','title_rule':'女士圆领短袖2件套{print_name}印花圆领T恤+短裤'}.items()}
         frame=ttk.Frame(window,padding=18);frame.pack(fill='both',expand=True)
-        ttk.Label(frame,text='妙手批量上架助手',font=('',18,'bold')).pack(anchor='w')
+        ttk.Label(frame,text='飞凡上架',font=('',18,'bold')).pack(anchor='w')
         ttk.Label(frame,text='读取SKU导出CSV → 核对英文标题与价格 → 生成妙手服饰导入表').pack(anchor='w',pady=8)
         for key,label,folder in [('source','SKU导出文件（CSV）',False),('output','保存目录',True),('template','妙手官方服饰模板',False)]:
             row=ttk.Frame(frame);row.pack(fill='x',pady=6);ttk.Label(row,text=label,width=25).pack(side='left')

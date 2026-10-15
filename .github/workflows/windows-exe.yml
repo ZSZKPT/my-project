@@ -19,15 +19,15 @@ jobs:
       - run: python -m unittest discover -s tests -p test_miaoshou.py -v
       - run: python -m unittest discover -s tests -p test_print_names.py -v
       - run: python -m unittest discover -s tests -p test_pipeline.py -v
-      - run: python -m PyInstaller --noconfirm --clean --onefile --windowed --name MiaoshouTemuTool --paths . --add-data "desktop/assets;assets" desktop/main.py
+      - run: python -m PyInstaller --noconfirm --clean --onefile --windowed --name "飞凡上架" --paths . --add-data "desktop/assets;assets" desktop/main.py
       - name: Smoke test Windows EXE
         run: |
-          $process = Start-Process -FilePath dist/MiaoshouTemuTool.exe -ArgumentList '--self-test' -PassThru
+          $process = Start-Process -FilePath 'dist/飞凡上架.exe' -ArgumentList '--self-test' -PassThru
           if (-not $process.WaitForExit(60000)) { $process.Kill(); throw 'EXE startup test timed out.' }
           if ($process.ExitCode -ne 0) { throw 'EXE startup test failed.' }
-      - run: Compress-Archive -Path dist/MiaoshouTemuTool.exe,desktop/README.md -DestinationPath dist/MiaoshouTemuTool-Windows.zip
+      - run: Compress-Archive -Path 'dist/飞凡上架.exe',desktop/README.md -DestinationPath dist/飞凡上架-Windows.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: MiaoshouTemuTool-Windows
-          path: dist/MiaoshouTemuTool-Windows.zip
+          name: FeifanShangjia-Windows
+          path: dist/飞凡上架-Windows.zip
           if-no-files-found: error

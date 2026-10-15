@@ -23,7 +23,7 @@ def build(app):
     style.map('Accent.TButton',background=[('disabled','#b0c8cb'),('active','#086d78')])
     style.configure('Horizontal.TProgressbar',background=teal,troughcolor='#e3edef',borderwidth=0)
     header=tk.Frame(root,bg='#12343c',padx=24,pady=17);header.pack(fill='x')
-    tk.Label(header,text='妙手 · 批量上架助手',bg='#12343c',fg='white',font=('Microsoft YaHei UI',20,'bold')).pack(anchor='w')
+    tk.Label(header,text='飞凡上架',bg='#12343c',fg='white',font=('Microsoft YaHei UI',20,'bold')).pack(anchor='w')
     tk.Label(header,text='图片与模板，一次整理。上传图片 → 自动填表 → 妙手手动批量发布',bg='#12343c',fg='#b9d4d9',font=('Microsoft YaHei UI',10)).pack(anchor='w',pady=(5,0))
     app.status_text=tk.StringVar(value='等待准备')
     app.status_label=tk.Label(header,textvariable=app.status_text,bg='#244b53',fg='#d9eff0',padx=13,pady=6,font=('Microsoft YaHei UI',10))

@@ -1,4 +1,4 @@
-# 妙手批量上架助手：图片自动处理版
+# 飞凡上架：图片自动处理版
 
 ## 主流程
 
@@ -44,9 +44,9 @@
 
 ## Windows构建和测试
 
-Windows双击 `windows/build-exe.cmd`，输出 `dist/MiaoshouTemuTool-Windows.zip`；本机打包需Python3.12+和网络。最终EXE不需要安装Python。
+Windows双击 `windows/build-exe.cmd`，输出 `dist/飞凡上架-Windows.zip`；本机打包需Python3.12+和网络。最终EXE不需要安装Python。
 
-GitHub Actions构建并启动EXE检查内置模板，产物名为 `MiaoshouTemuTool-Windows`。数据流测试覆盖两个本地货号、模拟上传后生成10行SKU、1000方形素材链接、29元申报价/145元建议售价、多模板存取及不保存密钥。真实ImgBB上传与妙手平台导入需在用户电脑验证。
+GitHub Actions构建并启动EXE检查内置模板，产物名为 `FeifanShangjia-Windows`。数据流测试覆盖两个本地货号、模拟上传后生成10行SKU、1000方形素材链接、29元申报价/145元建议售价、多模板存取及不保存密钥。真实ImgBB上传与妙手平台导入需在用户电脑验证。
 
 ## 界面
 

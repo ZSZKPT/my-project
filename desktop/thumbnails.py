@@ -18,7 +18,7 @@ def open_preview(parent,path,sku):
     try:
         bounds=(min(960,parent.winfo_screenwidth()-140),min(760,parent.winfo_screenheight()-160))
         image=preview_image(path,bounds)
-        window=tk.Toplevel(parent);window.title(f'{sku} · 主图预览');window.configure(bg='white')
+        window=tk.Toplevel(parent);window.title(f'飞凡上架 · {sku} · 主图预览');window.configure(bg='white')
         photo=ImageTk.PhotoImage(image,master=window)
         label=tk.Label(window,image=photo,bg='white',padx=12,pady=12);label.image=photo;label.pack()
         ttk.Label(window,text=path.name,padding=10).pack()

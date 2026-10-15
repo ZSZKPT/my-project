@@ -6,7 +6,7 @@ from desktop.profiles import validate, save
 
 
 def open_editor(parent,current,directory,on_saved):
-    window=tk.Toplevel(parent);window.title('另存为产品模板');window.geometry('900x780')
+    window=tk.Toplevel(parent);window.title('飞凡上架 · 另存为产品模板');window.geometry('900x780')
     base=copy.deepcopy(current);entries={}
     labels={'name':'模板名称','title':'中文标题规则（含 {print_name}，可加 {sku}）','english_title':'英文标题规则（可加 {sku}）','category_id':'Temu类目ID','origin':'产地','color':'颜色','description':'共用描述','packaging_shape':'外包装形状','packaging_type':'外包装类型','packaging_image':'固定包装图片链接'}
     for row,(key,label) in enumerate(labels.items()):

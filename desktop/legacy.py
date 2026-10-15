@@ -25,7 +25,7 @@ ASSETS = Path(getattr(sys, '_MEIPASS', Path(__file__).resolve().parent)) / 'asse
 class App:
     def __init__(self, window):
         self.window=window
-        window.title('妙手批量上架助手 · 图片自动处理')
+        window.title('飞凡上架 · 图片自动处理')
         window.geometry('1100x900')
         self.events=queue.Queue(); self.groups=[]; self.names=[]; self.busy=False; self.thumbnails={}
         self.variables={k:tk.StringVar(value=v) for k,v in {
