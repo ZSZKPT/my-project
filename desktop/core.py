@@ -4,6 +4,13 @@ import re
 import time
 from pathlib import Path
 from urllib.request import Request, urlopen
+from urllib.error import HTTPError, URLError
+import ssl
+
+
+class RetryableUploadError(ValueError):
+    """A temporary upload failure that may safely resume from the checkpoint."""
+
 from urllib.parse import urlencode
 from PIL import Image, ImageOps
 from import_tools.miaoshou import number
@@ -62,8 +69,18 @@ def upload_imgbb(path, key):
         if not result.get('success') or not url.startswith('https://'):
             raise ValueError('无有效图片链接')
         return url
-    except Exception:
-        raise ValueError('图片上传失败，请检查 API Key、网络或服务额度。密钥未写入日志。') from None
+    except HTTPError as error:
+        if error.code in (408, 429) or 500 <= error.code <= 599:
+            raise RetryableUploadError('图片服务暂时不可用') from None
+        raise ValueError('图片服务拒绝上传，请检查 API Key、图片或额度') from None
+    except URLError as error:
+        if isinstance(error.reason, ssl.SSLCertVerificationError):
+            raise ValueError('图片服务证书验证失败，请检查系统时间或证书配置') from None
+        raise RetryableUploadError('图片上传网络暂时不可用') from None
+    except (TimeoutError, ConnectionError):
+        raise RetryableUploadError('图片上传连接中断或超时') from None
+    except (ValueError, TypeError):
+        raise ValueError('图片服务未返回有效链接，请检查 API Key、图片或额度') from None
 
 
 def load_profile(path):

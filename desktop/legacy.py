@@ -8,7 +8,7 @@ from tkinter import ttk, filedialog, messagebox
 
 if __package__ in (None, ''):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from desktop.core import discover, upload_imgbb
+from desktop.core import discover, upload_imgbb, RetryableUploadError
 from import_tools.miaoshou import export, parse_price
 from desktop.profiles import load as load_template, storage_dir, products_to_rows
 from desktop.template_editor import open_editor
@@ -26,6 +26,7 @@ class App:
         self.window=window
         window.title('飞凡上架 · 图片自动处理')
         window.geometry('1100x900')
+        self.stop_retry=threading.Event()
         self.events=queue.Queue(); self.groups=[]; self.names=[]; self.busy=False; self.thumbnails={}
         self.variables={k:tk.StringVar(value=v) for k,v in {
             'source':'','output':'','profile':str(ASSETS/'运动短袖套装.json'),'template':str(ASSETS/'妙手Temu服饰模板.xlsx'),'price':'',
@@ -182,10 +183,20 @@ class App:
         except Exception as error:messagebox.showerror('无法接续旧输出',str(error))
 
     def work(self,values,config,groups,task_path=None):
+        self.stop_retry.clear()
         try:
             emit=lambda kind,value:self.events.put((kind,value))
             task=Task(task_path,emit) if task_path else Task.create(values,config,groups,emit)
-            task.run(lambda path:upload_imgbb(path,values['key']),values.get('links') or None)
+            while True:
+                try:
+                    task.run(lambda path:upload_imgbb(path,values['key']),values.get('links') or None)
+                    break
+                except RetryableUploadError:
+                    self.events.put(('log','网络或图片服务暂时中断，3 秒后从保存的位置继续。'))
+                    for remaining in (3,2,1):
+                        self.events.put(('status',f'{remaining} 秒后自动继续 · 已保存进度'))
+                        if self.stop_retry.wait(1):
+                            raise ValueError('已停止自动重试，可手动继续上次任务') from None
         except Exception as error:
             self.events.put(('status','被动中断 · 可继续上次任务'))
             self.events.put(('log',f'任务中断：{error}。已保存的图片和链接会在继续时复用。'))

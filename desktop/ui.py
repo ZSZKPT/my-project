@@ -102,6 +102,7 @@ def build(app):
     app.resume_button=ttk.Button(resume,text='继续上次任务',command=app.resume_saved,state='disabled');app.resume_button.pack(side='left')
     app.load_task_button=ttk.Button(resume,text='加载任务记录',command=lambda:app.resume_saved(select=True));app.load_task_button.pack(side='left',padx=6)
     ttk.Button(resume,text='新建任务',command=app.new_task).pack(side='right')
+    ttk.Button(task,text='停止自动重试',command=app.stop_retry.set).pack(fill='x',pady=(4,0))
     app.run_button=ttk.Button(task,text='开始自动处理并生成妙手表格',style='Accent.TButton',command=app.start);app.run_button.pack(fill='x',pady=(14,8))
     ttk.Label(task,text='生成后请到妙手批量手动导入，选择尺码表及属性，再确认发布。',style='Muted.TLabel',wraplength=600).pack(anchor='w')
 
