@@ -2,5 +2,19 @@
 'use strict';
 const feedStatusNames={ok:'采集成功',robots_disallowed:'站点规则不允许',robots_unavailable:'采集规则暂不可查',auth_required:'需要登录',verification_required:'需要验证',http_error:'访问被拒绝',no_public_products:'未识别公开商品',redirected:'页面跳转',failed:'采集失败',invalid_target:'目标无效'};
 function renderFeedTargets(data){if(!data.targets?.length)return;$('#targetList').innerHTML=data.targets.map(t=>`<article class="target"><span class="pill">${escape(feedStatusNames[t.status]||'等待采集')}</span><h3 style="margin-top:16px">${escape(t.platform)}</h3><p>${escape(t.name||'')}</p><p>站点请求：${escape(t.site||'未知')}<br>最近成功：${escape(t.lastSuccess?new Date(t.lastSuccess).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'}):'尚无')}<br>本次识别：${Number(t.count)||0} 条</p><p>${escape(t.message||'')}</p><a href="${escape(safeURL(t.url))}" target="_blank" rel="noopener noreferrer">打开目标页面 ↗</a></article>`).join('')}
-async function syncFeed(manual=false){today=dateKey();const button=$('#refreshFeed');button.disabled=true;try{if(location.protocol==='file:'){if(manual)toast('离线文件不能读取在线任务，请打开已部署的网址，或导入每日数据 JSON');return}const r=await fetch('./data/latest.json',{cache:'no-store',signal:AbortSignal.timeout(15000)});if(!r.ok)throw Error('采集数据尚未发布');const data=await r.json();if(!Array.isArray(data.products)||!Array.isArray(data.targets))throw Error('采集数据格式无效');if(!data.generatedAt){if(manual)toast('等待云端首次采集，请检查 GitHub Actions 任务');return}const incoming=data.products.map(normalize),map=new Map(state.products.filter(p=>!p.demo).map(p=>[identity(p),p]));for(const p of incoming){const old=map.get(identity(p));map.set(identity(p),old?{...p,id:old.id,favorite:old.favorite,notes:old.notes,rating:old.rating,status:old.status}:p)}state.products=[...map.values()];const ok=data.targets.filter(t=>t.status==='ok').length;feedReport={summary:`云端最近运行：${new Date(data.generatedAt).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'})}（北京时间） · 成功 ${ok}/${data.targets.length} 个目标 · ${incoming.length} 条累计真实记录。受限目标保留上次数据。`};persist();render();renderFeedTargets(data);if(manual)toast('已读取最近一次云端结果，不会立即触发爬虫')}catch(error){if(manual)toast('更新失败，已保留本地记录：'+error.message);$('#saveStatus').textContent='在线采集结果暂不可读 · 本地选款记录仍保留'}finally{button.disabled=false}}
-$('#refreshFeed').onclick=()=>syncFeed(true);syncFeed();setInterval(()=>{if(document.visibilityState==='visible')syncFeed()},5*60*1000);
+function syncFeed(){toast('请点击 Chrome 扩展中的“同步在线表格”；本页不会启动云端匿名采集')}
+$('#refreshFeed').onclick=syncFeed;
+// Explicit transfer from the installed extension to this same browser's selection page.
+window.addEventListener('message',event=>{
+ if(event.source!==window||event.origin!==location.origin||event.data?.type!=='FEIFAN_BROWSER_CAPTURE')return;
+ try{
+  const data=event.data.payload;if(data?.mode!=='browser'||!Array.isArray(data.products))throw Error('浏览器采集格式无效');
+  today=dateKey();const incoming=data.products.map(p=>normalize({...p,source:'browser'}));
+  const map=new Map(state.products.filter(p=>!p.demo).map(p=>[identity(p),p]));
+  for(const p of incoming){const old=map.get(identity(p));map.set(identity(p),old?{...p,id:old.id,favorite:old.favorite,notes:old.notes,status:old.status,rating:old.rating}:p)}
+  state.products=[...map.values()];localStorage.setItem('feifan-browser-mode','1');
+  feedReport={summary:`浏览器采集模式 · 最近同步 ${new Date().toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'})} · ${incoming.length} 条记录。Pinterest 来源为你的首页推荐，数据仅保存在当前浏览器。`};
+  persist();render();$('#targetList').innerHTML=(data.reports||[]).slice(0,12).map(t=>`<article class="target"><span class="pill">${escape(feedStatusNames[t.status]||t.status)}</span><h3>${escape(t.platform)}</h3><p>${escape(t.message)}</p><p>${Number(t.count)||0} 条 · ${escape(t.time)}</p></article>`).join('');toast('已接收浏览器采集，保留已有选款备注和收藏');
+ }catch(error){toast('浏览器采集导入失败：'+error.message)}
+});
+{feedReport={summary:'浏览器采集模式 · 请通过 Chrome 扩展采集并同步；Pinterest 使用你的首页推荐。数据仅保存在当前浏览器。'};render()}

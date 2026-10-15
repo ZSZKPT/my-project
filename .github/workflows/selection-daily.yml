@@ -1,11 +1,6 @@
 name: Daily Selection Collection
 on:
-  schedule:
-    - cron: '0 1 * * *'
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths: ['selection-crawler/**', '.github/workflows/selection-daily.yml']
 concurrency:
   group: daily-selection
   cancel-in-progress: false
