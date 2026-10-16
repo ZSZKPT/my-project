@@ -6,7 +6,7 @@
 
 需要 Python 3.12+ 和现代 Chrome / Edge。首次安装需要联网下载 PyPI 依赖，运行与素材处理均在本机，无外部 CDN、账号或云端上传。
 
-Windows：安装 Python（含 Python Launcher），解压后双击 `start.cmd`。macOS / Linux：在解压目录运行 `bash start.sh`。浏览器访问终端提示的本机地址，关闭终端会停止服务。Windows 启动脚本提供源码，当前验证平台为 Linux + Chromium；没有交付或验证 Windows EXE。
+Windows：安装 Python（含 Python Launcher），解压后双击 `START-WINDOWS.cmd`（也可用 `start.cmd`）。macOS / Linux：在解压目录运行 `bash start.sh`。浏览器访问终端提示的本机地址，关闭终端会停止服务。Windows 启动脚本提供源码，当前验证平台为 Linux + Chromium；没有交付或验证 Windows EXE。
 
 也可手动运行：
 
@@ -78,3 +78,10 @@ npm run test:browser
 ## 文件结构
 
 `web/` 中文界面；`geometry.py` 几何及独立复核；`engine.py` 排料；`assets.py` 素材和轮廓；`exporting.py` 生产输出；`server.py` 本地HTTP服务；`examples/` 虚构样本；`tests/` 自动化测试；`requirements.lock` 完整Python依赖版本；`package-lock.json` 可选浏览器测试依赖锁。
+
+
+## Windows 双击无反应
+
+下载更新包后解压到一个新文件夹，双击 `START-WINDOWS.cmd`。该入口使用保留窗口模式，启动器会显示Python版本、依赖安装进度，并在服务健康检查通过后打开浏览器。首次安装可能需要数分钟，请保留窗口。失败时查看同目录 `startup.log`，不要反复双击启动。若未找到Python，窗口会提供官方下载地址；安装时勾选 Add python.exe to PATH。旧目录中的 `.venv` 不需要复制到新目录。
+
+Windows启动修复在Linux上完成Python语法检查和模拟进程测试；没有实际Windows机器，不能据此宣称Windows端已实测成功。

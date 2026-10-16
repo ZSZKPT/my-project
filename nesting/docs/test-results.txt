@@ -16,10 +16,13 @@ test_jpg_background_and_missing_dpi (test_nesting.ImportTests.test_jpg_backgroun
 test_png_holes_filled (test_nesting.ImportTests.test_png_holes_filled) ... ok
 test_svg_units_transforms_selection_curves (test_nesting.ImportTests.test_svg_units_transforms_selection_curves) ... ok
 test_unsafe_svg_rejected (test_nesting.ImportTests.test_unsafe_svg_rejected) ... ok
+test_existing_healthy_server_opens_browser_without_duplicate_server (test_windows_bootstrap.WindowsStartupTests.test_existing_healthy_server_opens_browser_without_duplicate_server) ... ok
+test_install_failure_keeps_error_and_does_not_open_browser (test_windows_bootstrap.WindowsStartupTests.test_install_failure_keeps_error_and_does_not_open_browser) ... ok
+test_old_python_logs_actionable_error_without_launching (test_windows_bootstrap.WindowsStartupTests.test_old_python_logs_actionable_error_without_launching) ... ok
 
 ----------------------------------------------------------------------
-Ran 18 tests in 1.225s
+Ran 21 tests in 1.263s
 
 OK
 
-100文件测试：1.001s，Python峰值分配0.33MiB（不含GEOS原生内存）
+100文件测试：1.001s，Python峰值分配0.32MiB（不含GEOS原生内存）

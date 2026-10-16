@@ -36,3 +36,8 @@
 - SVG采用有保守余量的离散轮廓，非精确解析曲线NFP。有限候选点搜索可能遗漏更省料的排列。
 
 `docs/desktop.png`、`docs/mobile.png`来自上述浏览器测试，展示虚构样本及测试JPG，不是用户生产文件。
+
+
+## Windows 启动诊断更新
+
+新增 `START-WINDOWS.cmd` 保留命令窗口的入口，以及标准库实现的 `windows_bootstrap.py`。旧Python、依赖安装失败会保存可读错误到 `startup.log`；健康检查通过后才打开浏览器；已有健康服务时避免重复启动。新增3项模拟进程测试通过，合计21项Python测试通过。该改动尚未在真实Windows系统执行，用户电脑的故障原因仍需通过日志确认。

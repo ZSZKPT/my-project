@@ -9,7 +9,7 @@ parser=argparse.ArgumentParser();parser.add_argument('--output',type=Path,defaul
 target=args.output.resolve();target.parent.mkdir(parents=True,exist_ok=True)
 files=[]
 for p in sorted(ROOT.rglob('*')):
-    if not p.is_file():continue
+    if not p.is_file() or p.name=='startup.log':continue
     rel=p.relative_to(ROOT)
     if any(part in {'.venv','node_modules','__pycache__','output','.git'} for part in rel.parts) or p.suffix in {'.pyc','.zip'}:continue
     if p.is_symlink():raise ValueError(f'不打包符号链接：{rel}')
