@@ -59,3 +59,12 @@ test('ZIP action supports all captured images with unknown metrics and records a
  const result=await send('downloadZip',{scope:'all'});assert.equal(result.ok,true);assert.match(downloads.at(-1).filename,/全部已采集.*\.zip$/);assert.equal(state.zipProgress.status,'downloading');const id=state.zipDownload.id;
  onDownloadChanged({id,state:{current:'complete'}});await new Promise(r=>setTimeout(r,10));assert.equal(state.zipProgress.status,'complete');
 });
+test('review thresholds and same-link multicolor gate combine without treating unknown as single color',async()=>{
+ state.products=[{productId:'multi',reviews:101,colorCount:2,colorCountExact:false,image:'https://i.pinimg.com/m.jpg'},{productId:'single',reviews:100,colorCount:1,colorCountExact:true,likes:200,image:'https://i.pinimg.com/s.jpg'},{productId:'unknown',reviews:200,colorCount:null,image:'https://i.pinimg.com/u.jpg'}];
+ const reviews=await send('likePreview',{criteria:{reviews:100,operator:'and'}});assert.match(reviews.message,/2 张可下载/);
+ const multiple=await send('likePreview',{criteria:{reviews:100,colors:'multiple',operator:'and'}});assert.match(multiple.message,/1 张可下载/);
+ const colorsOnly=await send('likePreview',{criteria:{colors:'multiple',operator:'and'}});assert.match(colorsOnly.message,/1 张可下载/);
+ const single=await send('likePreview',{criteria:{colors:'single',operator:'and'}});assert.match(single.message,/1 张可下载/);
+ const either=await send('likePreview',{criteria:{likes:100,reviews:100,colors:'multiple',operator:'or'}});assert.match(either.message,/1 张可下载/);
+ assert.equal((await send('likePreview',{criteria:{colors:'not-a-mode',operator:'and'}})).ok,false);
+});

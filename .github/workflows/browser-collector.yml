@@ -17,6 +17,7 @@ jobs:
       - run: |
           node --check browser-collector/background.js
           node --check browser-collector/extract.js
+          node --check browser-collector/pagination.js
           node --check browser-collector/popup.js
           node --check browser-collector/zip.js
           node --check browser-collector/zip-offscreen.js

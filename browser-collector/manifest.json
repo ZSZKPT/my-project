@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "飞凡选款 · 浏览器采集",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "使用当前 Chrome 的正常登录状态采集选款参考；Pinterest 仅从你的首页推荐读取。",
   "permissions": [
     "activeTab",
