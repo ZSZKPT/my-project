@@ -72,7 +72,7 @@ def main():
         webview.settings['ALLOW_DOWNLOADS']=True
         webview.settings['ALLOW_FILE_URLS']=False
         webview.settings['OPEN_EXTERNAL_LINKS_IN_BROWSER']=False
-        window=webview.create_window('布序 v8 · 本地排料工作台',url,js_api=bridge,
+        window=webview.create_window('布序 v9 · 本地排料工作台',url,js_api=bridge,
             width=1440,height=960,min_size=(1000,700),background_color='#f6f5f0')
         bridge._window=window
         state={'passed':False,'error':None}

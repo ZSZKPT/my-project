@@ -31,7 +31,7 @@ class NativeBridge:
 
     def info(self):
         self._check_origin()
-        return {'embedded':True,'version':'8.0','nativeSave':True}
+        return {'embedded':True,'version':'9.0','nativeSave':True}
 
     def choose_binding_folder(self,recursive=False):
         """Read only the folder explicitly selected in the native chooser."""
@@ -79,19 +79,18 @@ class NativeBridge:
             if root not in path.parents or not path.is_file():raise ValueError('包边条已移动或不在所选文件夹内')
             return path
 
-    def copy_binding_files(self,requests,rule='style-folder'):
-        """One byte-identical strip copy for every original source instance."""
+    def copy_binding_files(self,requests,rule='style-folder',quantities=None):
+        """Copy original strip bytes according to editable quantities per style."""
         if not self._save_lock.acquire(blocking=False):return {'error':'正在保存，请等待完成'}
         staging=None
         try:
             self._check_origin()
-            from binding import match_files,filename_stem
+            from binding import copy_plan,filename_stem
             with self._binding_lock:
                 if self._binding_root is None:raise ValueError('请先选择包边条文件夹')
                 files=[{k:v for k,v in entry.items() if k!='path'} for entry in self._binding_files.values()]
-            matched=match_files(requests,files,rule)
-            if matched['missing'] or matched['ambiguous']:raise ValueError('存在未找到或重名的包边条，请先修正匹配结果')
-            paths=[self._binding_entry(m['file']['id']) for m in matched['matches']]
+            plan=copy_plan(requests,files,rule,quantities)
+            paths=[self._binding_entry(m['file']['id']) for m in plan]
             import webview
             chosen=self._window.create_file_dialog(webview.FileDialog.FOLDER)
             if not chosen:return {'cancelled':True}
@@ -101,8 +100,8 @@ class NativeBridge:
             if shutil.disk_usage(parent).free<required+1024*1024:raise ValueError('输出文件夹磁盘空间不足')
             staging=Path(tempfile.mkdtemp(dir=parent,prefix='.buxu-binding-'))
             mapping=[];used=set()
-            for match,path in zip(matched['matches'],paths):
-                stem=filename_stem(match['filename']);base=stem+'-包边条';name=base+path.suffix.lower();serial=2
+            for match,path in zip(plan,paths):
+                stem=filename_stem(match['filename']);base=match.get('outputStem',stem+'-包边条');name=base+path.suffix.lower();serial=2
                 while name.casefold() in used:name=f'{base} ({serial})'+path.suffix.lower();serial+=1
                 # Filenames came from source metadata, never allow path syntax
                 # to escape the new output folder (including Windows paths).
@@ -115,7 +114,7 @@ class NativeBridge:
                 shutil.copy2(source,staging/name)
                 mapping.append((match['filename'],match['file']['relativePath'],name))
             with (staging/'包边条对应清单.csv').open('w',encoding='utf-8-sig',newline='') as output:
-                writer=csv.writer(output);writer.writerow(['已排原图片','包边条来源','复制文件'])
+                writer=csv.writer(output);writer.writerow(['导入原图片','包边条来源','复制文件'])
                 def safe(v):return "'"+v if v.startswith(('=','+','-','@','\t','\r')) else v
                 writer.writerows([[safe(v) for v in row] for row in mapping])
             folder=parent/('布序包边条-'+datetime.now().strftime('%Y%m%d-%H%M%S')+'-'+uuid.uuid4().hex[:6])

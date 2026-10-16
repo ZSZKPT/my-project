@@ -58,3 +58,43 @@ def match_files(requests,files,rule='style-folder'):
         elif not candidates:missing.append(item)
         else:ambiguous.append({**item,'candidates':candidates})
     return {'matches':matches,'missing':missing,'ambiguous':ambiguous,'requested':len(requests),'rule':rule}
+
+
+def style_code(name):
+    """YQ-TJGG-44-L-1 -> YQ-TJGG-44, without conflating 4 and 44."""
+    stem=filename_stem(name)
+    numbered=re.match(r'^(.+?-\d+)(?:-|$)',stem)
+    if numbered:return numbered[1]
+    return re.sub(r'[-_ ](?:x{0,4}[sl]|[2-9]xl|m|均码)(?:[-_ ]\d+)?$','',stem,flags=re.I)
+
+
+def copy_plan(requests,files,rule='style-folder',quantities=None):
+    matched=match_files(requests,files,rule)
+    if quantities is None:
+        if matched['missing'] or matched['ambiguous']:raise ValueError('存在未找到或重名的包边条，请先修正匹配结果')
+        return matched['matches']
+    if not isinstance(quantities,dict):raise ValueError('包边条数量格式无效')
+    groups={}
+    for request in requests:
+        code=style_code(request['filename']);key=normalized(code)
+        groups.setdefault(key,{'style':code,'requests':[]})['requests'].append(request)
+    counts={}
+    for code,value in quantities.items():
+        key=normalized(code)
+        if key not in groups or key in counts:raise ValueError('数量包含未知或重复货号')
+        if isinstance(value,bool) or not isinstance(value,int) or not 0<=value<=1000:raise ValueError('每货号包边条数量应为0至1000的整数')
+        counts[key]=value
+    by_id={m['id']:m for m in matched['matches']};plan=[]
+    for key,group in groups.items():
+        members=group['requests'];quantity=counts.get(key,len(members))
+        if not quantity:continue
+        items=[by_id[r['id']] for r in members if r['id'] in by_id]
+        if len(items)!=len(members):raise ValueError(group['style']+'：未找到唯一对应的包边条，请检查款号文件夹')
+        if len({m['file']['id'] for m in items})!=1:raise ValueError(group['style']+'：有多个不同包边条，请按货号文件夹匹配')
+        if len(plan)+quantity>5000:raise ValueError('单次最多复制5000张包边条，请分批处理')
+        for serial in range(1,quantity+1):
+            plan.append({**items[(serial-1)%len(items)],'style':group['style'],
+                         'outputStem':f"{group['style']}-包边条-{serial:03d}"})
+    if not plan:raise ValueError('包边条数量均为0，无需复制')
+    if len(plan)>5000:raise ValueError('单次最多复制5000张包边条，请分批处理')
+    return plan

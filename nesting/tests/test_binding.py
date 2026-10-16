@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-from binding import match_files
+from binding import match_files,copy_plan,style_code
 from native_bridge import NativeBridge
 
 
@@ -38,6 +38,18 @@ class BindingMatchTests(unittest.TestCase):
         self.assertEqual(len(match_files(request,files[:1])['missing']),1)
         wrong_name=[{**files[1],'name':'YQ-TJGG-45-包边条.jpg'}]
         self.assertEqual(len(match_files(request,wrong_name)['missing']),1)
+
+    def test_style_quantities_override_defaults_zero_skips_missing_and_validation(self):
+        requests=[{'id':'a','filename':'YQ-TJGG-44-L-1.jpg'},{'id':'b','filename':'YQ-TJGG-44-M-2.jpg'},
+                  {'id':'c','filename':'YQ-TJGG-45-L-1.jpg'}]
+        files=entries('YQ-TJGG-44-包边条.jpg')
+        plan=copy_plan(requests,files,quantities={'YQ-TJGG-44':5,'YQ-TJGG-45':0})
+        self.assertEqual(len(plan),5);self.assertEqual(len({m['outputStem'] for m in plan}),5)
+        self.assertEqual(style_code('YQ-TJGG-44-L-1.jpg'),'YQ-TJGG-44')
+        for value in (-1,1.5,True,1001):
+            with self.assertRaises(ValueError):copy_plan(requests,files,quantities={'YQ-TJGG-44':value,'YQ-TJGG-45':0})
+        with self.assertRaises(ValueError):copy_plan(requests,files,quantities={'unknown':2})
+        with self.assertRaises(ValueError):copy_plan(requests,files,quantities={'YQ-TJGG-44':0,'YQ-TJGG-45':0})
 
     def test_explicit_exact_rule_and_copy_number_rule(self):
         names=entries('款号-L-1_包边条.png','款号-L-包边条.jpg')
@@ -101,6 +113,14 @@ class BindingCopyTests(unittest.TestCase):
         self.assertTrue(all(m['file']['parentName']=='YQ-TJGG-44' for m in matched['matches']))
         reply=self.bridge.copy_binding_files(self.requests);self.assertTrue(reply['saved'],reply)
         for file in Path(reply['folder']).glob('*.jpg'):self.assertEqual(file.read_bytes(),self.file.read_bytes())
+
+    def test_manual_style_quantity_controls_actual_copy_count(self):
+        self.bridge.choose_binding_folder()
+        reply=self.bridge.copy_binding_files(self.requests,quantities={'YQ-TJGG-44':5})
+        self.assertTrue(reply['saved'],reply);self.assertEqual(reply['count'],5)
+        images=list(Path(reply['folder']).glob('*.jpg'));self.assertEqual(len(images),5)
+        self.assertTrue(all(f.name.startswith('YQ-TJGG-44-包边条-') for f in images))
+        for f in images:self.assertEqual(f.read_bytes(),self.file.read_bytes())
 
     def test_cancel_output_folder_does_not_write(self):
         self.window.choices=[self.source,None];self.bridge.choose_binding_folder()

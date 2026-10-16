@@ -50,7 +50,7 @@ function renderStats(){const stats=result?.stats,total=project.pieces.length;$('
  $('comparison').replaceChildren();for(const item of result?.comparison||[]){const card=document.createElement('div');card.textContent=item.label;const number=document.createElement('strong');number.textContent=`${(item.length/1000).toFixed(3)} m`;const text=document.createElement('span');text.textContent=`利用率 ${(item.effectiveUtilization*100).toFixed(1)}% · ${item.seconds.toFixed(2)} s`;card.append(number,text);$('comparison').append(card)}
  $('solve').disabled=busy||!total;$('stop').hidden=!busy;$('stop').disabled=!jobId;['importBtn','importLink','demo','openProject','saveProject','export','validateBtn','emptyDemo','binding'].forEach(k=>$(k).disabled=busy);settingKeys.forEach(k=>$(k).disabled=busy);$('mode').disabled=busy;$('undo').disabled=busy||!past.length;$('redo').disabled=busy||!future.length;
 }
-function render(){renderList();renderCanvas();renderStats();updateInspector()}
+function render(){renderList();renderBindingStats();renderCanvas();renderStats();updateInspector()}
 async function check(){syncSettings();const rev=++revision;const current=await api('/api/validate',project);if(rev!==revision)return current;const previous=result;result={...current,...(previous?.comparison?{comparison:previous.comparison,seconds:previous.seconds,iterations:previous.iterations,timedOut:previous.timedOut,stopped:previous.stopped,phase:previous.phase,acceptedMoves:previous.acceptedMoves,gridRounds:previous.gridRounds}:{})};render();return current}
 async function recheck(){try{await check()}catch(e){result=null;render();toast(e.message)}}
 function fileData(file){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(file)})}
@@ -109,7 +109,7 @@ async function download(blob,name){
  const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);return {saved:true};
 }
 $('saveProject').onclick=guarded(async()=>{syncSettings();if(project.placements.length){const v=await check();if(!v.valid)throw Error('当前排料有冲突，请修正后保存；也可重新排料')}const saved=await download(new Blob([JSON.stringify(project)],{type:'application/json'}),'布序项目.nest.json');if(!saved?.cancelled)toast('项目已保存，包含原始素材；请妥善保存')});
-$('openProject').onclick=()=>$('projectFile').click();$('projectFile').onchange=guarded(async e=>{const file=e.target.files[0];e.target.value='';if(!file)return;if(file.size>100*1024*1024)throw Error('项目超过100MB');const candidate=JSON.parse(await file.text());for(const p of candidate.pieces||[])if(p.verticalOnly)p.fixedPair=true;if(candidate.version!==1||candidate.unit!=='mm'||!Array.isArray(candidate.pieces)||!Array.isArray(candidate.placements)||!candidate.settings)throw Error('项目格式或版本不支持');if(candidate.pieces.some(p=>p.quantity!==1))throw Error('每个自动识别的裁片仅排一份，不支持数量合并');if(candidate.pieces.length>500)throw Error('最多500片');
+$('openProject').onclick=()=>$('projectFile').click();$('projectFile').onchange=guarded(async e=>{const file=e.target.files[0];e.target.value='';if(!file)return;if(file.size>100*1024*1024)throw Error('项目超过100MB');const candidate=JSON.parse(await file.text());for(const p of candidate.pieces||[])if(p.verticalOnly)p.fixedPair=true;if(candidate.bindingQuantities!==undefined&&(!candidate.bindingQuantities||typeof candidate.bindingQuantities!=='object'||Array.isArray(candidate.bindingQuantities)||Object.keys(candidate.bindingQuantities).length>500||Object.values(candidate.bindingQuantities).some(n=>!Number.isInteger(n)||n<0||n>1000)))throw Error('项目包边条数量格式错误');if(candidate.version!==1||candidate.unit!=='mm'||!Array.isArray(candidate.pieces)||!Array.isArray(candidate.placements)||!candidate.settings)throw Error('项目格式或版本不支持');if(candidate.pieces.some(p=>p.quantity!==1))throw Error('每个自动识别的裁片仅排一份，不支持数量合并');if(candidate.pieces.length>500)throw Error('最多500片');
  // Validate all source assets through the local importer before rendering untrusted data URLs.
  for(const p of candidate.pieces){if(!/^data:image\/(png|jpeg|svg\+xml);base64,/.test(p.source||''))throw Error('项目含不支持的素材');if(typeof p.name!=='string'||!Number.isFinite(p.width)||!Number.isFinite(p.height)||!Array.isArray(p.contours))throw Error('裁片格式错误')}
  await api('/api/project/check',candidate);
@@ -157,21 +157,21 @@ syncSettings();render();api('/api/health').catch(()=>toast('本地服务未连�
 let bindingRequests=[],bindingMatch=null,bindingBusy=false,bindingRevision=0;
 function bindingApi(){const native=window.pywebview?.api;if(!native?.choose_binding_folder)throw Error('请使用新版Windows EXE，通过本机文件夹选择器拉取包边条');return native}
 function bindingSources(){
- const placed=new Set(project.placements.map(p=>p.pieceId));const groups=new Map();
- for(const p of project.pieces){if(!placed.has(p.id)||p.role==='binding-strip'||p.bindingFor)continue;
+ const groups=new Map();
+ for(const p of project.pieces){if(p.role==='binding-strip'||p.bindingFor)continue;
   const id=p.sourceGroup||p.id;if(!groups.has(id))groups.set(id,{id,filename:p.filename||p.name});
  }
  return [...groups.values()];
 }
 function bindingControls(){
- const complete=!!bindingMatch&&bindingMatch.matches.length===bindingRequests.length&&!bindingMatch.missing.length&&!bindingMatch.ambiguous.length;
+ const counts=bindingCounts(),required=bindingRequests.filter(r=>counts[bindingStyle(r.filename)]>0),matched=new Set(bindingMatch?.matches.map(m=>m.id)||[]);const total=Object.values(counts).reduce((a,b)=>a+b,0);const complete=total<=5000&&!!bindingMatch&&required.length>0&&required.every(r=>matched.has(r.id));
  $('bindingChoose').disabled=bindingBusy;$('bindingRule').disabled=bindingBusy;$('bindingRecursive').disabled=bindingBusy;
- $('bindingCopy').disabled=bindingBusy||!complete;
+ $('bindingCopy').disabled=bindingBusy||!complete;$('bindingCopy').textContent=`复制${total}张到输出文件夹`;
 
 }
 function showBindingResult(){
  const list=$('bindingResults');list.replaceChildren();if(!bindingMatch){bindingControls();return}
- const m=bindingMatch;$('bindingSummary').textContent=`${m.requested}个已排原图文件：匹配${m.matches.length}张，未找到${m.missing.length}张，重名待处理${m.ambiguous.length}张`;
+ const m=bindingMatch;$('bindingSummary').textContent=`${m.requested}个导入原图，计划复制${Object.values(bindingCounts()).reduce((a,b)=>a+b,0)}张；原图匹配${m.matches.length}个，未找到${m.missing.length}个，重名待处理${m.ambiguous.length}个`;
  for(const match of m.matches){const row=document.createElement('p');row.textContent=`✓ ${match.filename} → ${match.file.relativePath}`;list.append(row)}
  for(const missing of m.missing){const row=document.createElement('p');row.className='error-line';row.textContent=`未找到：${missing.filename}，请检查同款号文件夹内的同款号“包边条”图片`;list.append(row)}
  for(const ambiguous of m.ambiguous){const row=document.createElement('p');row.className='error-line';row.textContent=`有多个候选：${ambiguous.filename} → ${ambiguous.candidates.map(f=>f.relativePath).join('、')}`;list.append(row)}
@@ -179,14 +179,14 @@ function showBindingResult(){
 }
 async function refreshBinding(){
  const generation=++bindingRevision;bindingMatch=null;bindingControls();
- $('bindingExample').textContent=$('bindingRule').value==='style-folder'?'示例：YQ-TJGG-44-L-1.jpg → YQ-TJGG-44 文件夹 → YQ-TJGG-44-包边条.jpg。':$('bindingRule').value==='style-prefix'?'示例：YQ-TJGG-44-L-1.jpg → YQ-TJGG-44-包边条.jpg；每个已排原图各复制一张。':$('bindingRule').value==='exact'?'示例：款号-L-1.jpg → 款号-L-1包边条.jpg；可有横线、下划线或空格分隔。':'示例：款号-L-1.jpg、款号-L-2.jpg → 款号-L包边条.jpg；每个原图各取一张。';
+ $('bindingExample').textContent=$('bindingRule').value==='style-folder'?'示例：YQ-TJGG-44-L-1.jpg → YQ-TJGG-44 文件夹 → YQ-TJGG-44-包边条.jpg。':$('bindingRule').value==='style-prefix'?'示例：YQ-TJGG-44-L-1.jpg → YQ-TJGG-44-包边条.jpg；按左侧各货号数量复制。':$('bindingRule').value==='exact'?'示例：款号-L-1.jpg → 款号-L-1包边条.jpg；可有横线、下划线或空格分隔。':'示例：款号-L-1.jpg、款号-L-2.jpg → 款号-L包边条.jpg；每个原图各取一张。';
  if(!$('bindingFolder').dataset.selected)return;
  const reply=await bindingApi().match_binding_files(bindingRequests,$('bindingRule').value);if(generation!==bindingRevision)return;if(reply.error)throw Error(reply.error);
  bindingMatch=reply;showBindingResult();
 }
 $('binding').onclick=guarded(async()=>{
- if(busy||bindingBusy)return;bindingRequests=bindingSources();if(!bindingRequests.length)throw Error('请先完成原图排料，再按已排文件匹配包边条');
- bindingMatch=null;$('bindingSummary').textContent=`当前已排${bindingRequests.length}个原始图片文件`;
+ if(busy||bindingBusy)return;bindingRequests=bindingSources();if(!bindingRequests.length)throw Error('请先导入原图，再拉取包边条');
+ bindingMatch=null;$('bindingSummary').textContent=`当前已导入${bindingRequests.length}个原始图片文件`;
  $('bindingResults').replaceChildren();$('bindingDialog').showModal();bindingControls();await refreshBinding();
 });
 $('bindingChoose').onclick=guarded(async()=>{
@@ -199,8 +199,20 @@ $('bindingRule').onchange=guarded(refreshBinding);
 $('bindingRecursive').onchange=()=>{delete $('bindingFolder').dataset.selected;bindingMatch=null;$('bindingFolder').textContent='扫描范围已改变，请重新选择文件夹';$('bindingResults').replaceChildren();bindingControls()};
 $('bindingCopy').onclick=guarded(async()=>{
  if(bindingBusy)return;bindingBusy=true;bindingControls();$('bindingSummary').textContent='请选择输出文件夹，随后复制对应原图…';
- try{const reply=await bindingApi().copy_binding_files(bindingRequests,$('bindingRule').value);if(reply.error)throw Error(reply.error);
+ try{const reply=await bindingApi().copy_binding_files(bindingRequests,$('bindingRule').value,bindingCounts());if(reply.error)throw Error(reply.error);
   if(reply.cancelled){showBindingResult();toast('已取消复制');return}
   $('bindingSummary').textContent=`已复制${reply.count}张包边条及对应清单：${reply.folder}`;toast(`已拉取${reply.count}张包边条，当前排料未改变`);
  }finally{bindingBusy=false;bindingControls()}
 });
+
+function bindingStyle(filename){const stem=filename.replace(/\\/g,'/').split('/').pop().replace(/\.[^.]+$/,'');const numbered=stem.match(/^(.+?-\d+)(?:-|$)/);return (numbered?numbered[1]:stem.replace(/[-_ ](?:x{0,4}[sl]|[2-9]xl|m|均码)(?:[-_ ]\d+)?$/i,'')).normalize('NFKC').toUpperCase()}
+function bindingGroups(){const groups=new Map();for(const r of bindingSources()){const code=bindingStyle(r.filename);groups.set(code,(groups.get(code)||0)+1)}return groups}
+function bindingCounts(){const counts={};for(const [code,count] of bindingGroups())counts[code]=Object.hasOwn(project.bindingQuantities||{},code)?project.bindingQuantities[code]:count;return counts}
+function renderBindingStats(){
+ const groups=bindingGroups(),counts=bindingCounts(),list=$('bindingStatsRows');$('bindingStats').hidden=!groups.size;list.replaceChildren();
+ for(const [code,count] of groups){const row=document.createElement('label');row.className='binding-quantity-row';const title=document.createElement('span');title.textContent=`${code}（${count}个原图）`;const input=document.createElement('input');input.type='number';input.min=0;input.max=1000;input.step=1;input.value=counts[code];input.setAttribute('aria-label',code+'包边条数量');input.dataset.style=code;
+ input.onchange=()=>{const n=Number(input.value);if(input.value===''||!Number.isInteger(n)||n<0||n>1000){input.value=bindingCounts()[code];toast('数量应为0至1000的整数');return}project.bindingQuantities={...project.bindingQuantities,[code]:n};$('bindingStatsTotal').textContent=bindingTotalText();if($('bindingDialog').open)bindingControls()};row.append(title,input);list.append(row)}
+ $('bindingStatsTotal').textContent=bindingTotalText();
+}
+
+function bindingTotalText(){const total=Object.values(bindingCounts()).reduce((a,b)=>a+b,0);return `共${bindingGroups().size}个货号，包边条${total}张${total>5000?'（超过单次5000张，请减少数量）':''}`}
