@@ -1,0 +1,25 @@
+test_180_complementary_improves_real_length (test_nesting.EngineExportTests.test_180_complementary_improves_real_length) ... ok
+test_export_mm_rotation_original_bytes_segments_and_roundtrip (test_nesting.EngineExportTests.test_export_mm_rotation_original_bytes_segments_and_roundtrip) ... ok
+test_locks_are_preserved_and_conflicts_rejected (test_nesting.EngineExportTests.test_locks_are_preserved_and_conflicts_rejected) ... ok
+test_long_piece_segments_are_contiguous (test_nesting.EngineExportTests.test_long_piece_segments_are_contiguous) ... ok
+test_many_files_and_memory_budget (test_nesting.EngineExportTests.test_many_files_and_memory_budget) ... ok
+test_seed_reproducible_and_stopping_preserves_baseline (test_nesting.EngineExportTests.test_seed_reproducible_and_stopping_preserves_baseline) ... ok
+test_1580_edges_gap_and_adjustment (test_nesting.GeometryTests.test_1580_edges_gap_and_adjustment) ... ok
+test_bleed_head_tail_and_interior_overlap (test_nesting.GeometryTests.test_bleed_head_tail_and_interior_overlap) ... ok
+test_concave_not_bounding_boxes (test_nesting.GeometryTests.test_concave_not_bounding_boxes) ... ok
+test_count_duplicate_missing (test_nesting.GeometryTests.test_count_duplicate_missing) ... ok
+test_no_other_angles_no_mirror_and_per_piece_flag (test_nesting.GeometryTests.test_no_other_angles_no_mirror_and_per_piece_flag) ... ok
+test_oversized_and_invalid_polygons (test_nesting.GeometryTests.test_oversized_and_invalid_polygons) ... ok
+test_rotation_source_coordinates (test_nesting.GeometryTests.test_rotation_source_coordinates) ... ok
+test_dpi_and_rectangle_explicit (test_nesting.ImportTests.test_dpi_and_rectangle_explicit) ... ok
+test_jpg_background_and_missing_dpi (test_nesting.ImportTests.test_jpg_background_and_missing_dpi) ... ok
+test_png_holes_filled (test_nesting.ImportTests.test_png_holes_filled) ... ok
+test_svg_units_transforms_selection_curves (test_nesting.ImportTests.test_svg_units_transforms_selection_curves) ... ok
+test_unsafe_svg_rejected (test_nesting.ImportTests.test_unsafe_svg_rejected) ... ok
+
+----------------------------------------------------------------------
+Ran 18 tests in 1.225s
+
+OK
+
+100文件测试：1.001s，Python峰值分配0.33MiB（不含GEOS原生内存）

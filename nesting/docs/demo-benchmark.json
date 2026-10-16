@@ -1,0 +1,104 @@
+{
+  "valid": true,
+  "errors": [],
+  "missing": [],
+  "stats": {
+    "length": 1203.0,
+    "bodyLength": 1203.0,
+    "netArea": 1200000.0,
+    "occupiedArea": 1200000.0,
+    "bleedArea": 0.0,
+    "effectiveWidth": 1560.0,
+    "effectiveUtilization": 0.6394270733422853,
+    "fullUtilization": 0.6313330597556741,
+    "areaLowerBound": 769.2307692307693,
+    "counts": [
+      {
+        "id": "demo0",
+        "name": "前片-A（虚构样本）",
+        "required": 1,
+        "placed": 1,
+        "missing": 0
+      },
+      {
+        "id": "demo1",
+        "name": "前片-B（虚构样本）",
+        "required": 1,
+        "placed": 1,
+        "missing": 0
+      },
+      {
+        "id": "demo2",
+        "name": "后片-A（虚构样本）",
+        "required": 1,
+        "placed": 1,
+        "missing": 0
+      },
+      {
+        "id": "demo3",
+        "name": "后片-B（虚构样本）",
+        "required": 1,
+        "placed": 1,
+        "missing": 0
+      }
+    ]
+  },
+  "placements": [
+    {
+      "key": "demo0::0",
+      "pieceId": "demo0",
+      "x": 10.0,
+      "y": 0.0,
+      "angle": 0,
+      "locked": false
+    },
+    {
+      "key": "demo1::0",
+      "pieceId": "demo1",
+      "x": 33.33333333333333,
+      "y": 0.0,
+      "angle": 180,
+      "locked": false
+    },
+    {
+      "key": "demo2::0",
+      "pieceId": "demo2",
+      "x": 56.666666666666664,
+      "y": 597.0,
+      "angle": 180,
+      "locked": false
+    },
+    {
+      "key": "demo3::0",
+      "pieceId": "demo3",
+      "x": 10.0,
+      "y": 603.0,
+      "angle": 0,
+      "locked": false
+    }
+  ],
+  "comparison": [
+    {
+      "label": "外接矩形顺序排料",
+      "length": 2409.0,
+      "effectiveUtilization": 0.3193153878085385,
+      "seconds": 0.002571598000031372
+    },
+    {
+      "label": "真实轮廓初始方案",
+      "length": 1203.0,
+      "effectiveUtilization": 0.6394270733422853,
+      "seconds": 0.06827050599986251
+    },
+    {
+      "label": "当前找到的最佳方案",
+      "length": 1203.0,
+      "effectiveUtilization": 0.6394270733422853,
+      "seconds": 0.7800706309999441
+    }
+  ],
+  "iterations": 12,
+  "seconds": 0.7800706309999441,
+  "timedOut": false,
+  "stopped": false
+}

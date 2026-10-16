@@ -1,0 +1,150 @@
+{
+  "version": 1,
+  "unit": "mm",
+  "settings": {
+    "width": 1580,
+    "left": 10,
+    "right": 10,
+    "gap": 3,
+    "head": 0,
+    "tail": 0,
+    "seconds": 15,
+    "iterations": 12,
+    "seed": 42
+  },
+  "pieces": [
+    {
+      "id": "demo0",
+      "name": "前片-A（虚构样本）",
+      "filename": "前片-A.svg",
+      "style": "DEMO",
+      "size": "示例",
+      "quantity": 1,
+      "width": 1000,
+      "height": 600,
+      "contours": [
+        [
+          [
+            0,
+            0
+          ],
+          [
+            1000,
+            0
+          ],
+          [
+            0,
+            600
+          ]
+        ]
+      ],
+      "source": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAwbW0iIGhlaWdodD0iNjAwbW0iIHZpZXdCb3g9IjAgMCAxMDAwIDYwMCI+PHBhdGggaWQ9ImN1dCIgZD0iTTAsMCBMMTAwMCwwIEwwLDYwMCBaIiBmaWxsPSIjYjhjYWE0Ii8+PGcgZmlsbD0iI2ZmZmRmMCIgb3BhY2l0eT0iMC42NSI+PGNpcmNsZSBjeD0iODAiIGN5PSI4MCIgcj0iMzgiLz48Y2lyY2xlIGN4PSIyNDAiIGN5PSI4MCIgcj0iMzgiLz48Y2lyY2xlIGN4PSI0MDAiIGN5PSI4MCIgcj0iMzgiLz48Y2lyY2xlIGN4PSI1NjAiIGN5PSI4MCIgcj0iMzgiLz48Y2lyY2xlIGN4PSI3MjAiIGN5PSI4MCIgcj0iMzgiLz48Y2lyY2xlIGN4PSI4MCIgY3k9IjI0MCIgcj0iMzgiLz48Y2lyY2xlIGN4PSIyNDAiIGN5PSIyNDAiIHI9IjM4Ii8+PGNpcmNsZSBjeD0iNDAwIiBjeT0iMjQwIiByPSIzOCIvPjxjaXJjbGUgY3g9IjgwIiBjeT0iNDAwIiByPSIzOCIvPjwvZz48L3N2Zz4=",
+      "confirmed": true,
+      "dimensionConfirmed": true,
+      "allow180": true,
+      "bleed": 0,
+      "contourTolerance": 0,
+      "contourSource": "已知毫米坐标的虚构三角裁片"
+    },
+    {
+      "id": "demo1",
+      "name": "前片-B（虚构样本）",
+      "filename": "前片-B.svg",
+      "style": "DEMO",
+      "size": "示例",
+      "quantity": 1,
+      "width": 1000,
+      "height": 600,
+      "contours": [
+        [
+          [
+            0,
+            0
+          ],
+          [
+            1000,
+            0
+          ],
+          [
+            0,
+            600
+          ]
+        ]
+      ],
+      "source": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAwbW0iIGhlaWdodD0iNjAwbW0iIHZpZXdCb3g9IjAgMCAxMDAwIDYwMCI+PHBhdGggaWQ9ImN1dCIgZD0iTTAsMCBMMTAwMCwwIEwwLDYwMCBaIiBmaWxsPSIjZTFiNjk3Ii8+PGcgZmlsbD0iI2ZmZmRmMCIgb3BhY2l0eT0iMC42NSI+PGNpcmNsZSBjeD0iODAiIGN5PSI4MCIgcj0iMzgiLz48Y2lyY2xlIGN4PSIyNDAiIGN5PSI4MCIgcj0iMzgiLz48Y2lyY2xlIGN4PSI0MDAiIGN5PSI4MCIgcj0iMzgiLz48Y2lyY2xlIGN4PSI1NjAiIGN5PSI4MCIgcj0iMzgiLz48Y2lyY2xlIGN4PSI3MjAiIGN5PSI4MCIgcj0iMzgiLz48Y2lyY2xlIGN4PSI4MCIgY3k9IjI0MCIgcj0iMzgiLz48Y2lyY2xlIGN4PSIyNDAiIGN5PSIyNDAiIHI9IjM4Ii8+PGNpcmNsZSBjeD0iNDAwIiBjeT0iMjQwIiByPSIzOCIvPjxjaXJjbGUgY3g9IjgwIiBjeT0iNDAwIiByPSIzOCIvPjwvZz48L3N2Zz4=",
+      "confirmed": true,
+      "dimensionConfirmed": true,
+      "allow180": true,
+      "bleed": 0,
+      "contourTolerance": 0,
+      "contourSource": "已知毫米坐标的虚构三角裁片"
+    },
+    {
+      "id": "demo2",
+      "name": "后片-A（虚构样本）",
+      "filename": "后片-A.svg",
+      "style": "DEMO",
+      "size": "示例",
+      "quantity": 1,
+      "width": 1000,
+      "height": 600,
+      "contours": [
+        [
+          [
+            0,
+            0
+          ],
+          [
+            1000,
+            0
+          ],
+          [
+            0,
+            600
+          ]
+        ]
+      ],
+      "source": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAwbW0iIGhlaWdodD0iNjAwbW0iIHZpZXdCb3g9IjAgMCAxMDAwIDYwMCI+PHBhdGggaWQ9ImN1dCIgZD0iTTAsMCBMMTAwMCwwIEwwLDYwMCBaIiBmaWxsPSIjYThjNWJhIi8+PGcgZmlsbD0iI2ZmZmRmMCIgb3BhY2l0eT0iMC42NSI+PGNpcmNsZSBjeD0iODAiIGN5PSI4MCIgcj0iMzgiLz48Y2lyY2xlIGN4PSIyNDAiIGN5PSI4MCIgcj0iMzgiLz48Y2lyY2xlIGN4PSI0MDAiIGN5PSI4MCIgcj0iMzgiLz48Y2lyY2xlIGN4PSI1NjAiIGN5PSI4MCIgcj0iMzgiLz48Y2lyY2xlIGN4PSI3MjAiIGN5PSI4MCIgcj0iMzgiLz48Y2lyY2xlIGN4PSI4MCIgY3k9IjI0MCIgcj0iMzgiLz48Y2lyY2xlIGN4PSIyNDAiIGN5PSIyNDAiIHI9IjM4Ii8+PGNpcmNsZSBjeD0iNDAwIiBjeT0iMjQwIiByPSIzOCIvPjxjaXJjbGUgY3g9IjgwIiBjeT0iNDAwIiByPSIzOCIvPjwvZz48L3N2Zz4=",
+      "confirmed": true,
+      "dimensionConfirmed": true,
+      "allow180": true,
+      "bleed": 0,
+      "contourTolerance": 0,
+      "contourSource": "已知毫米坐标的虚构三角裁片"
+    },
+    {
+      "id": "demo3",
+      "name": "后片-B（虚构样本）",
+      "filename": "后片-B.svg",
+      "style": "DEMO",
+      "size": "示例",
+      "quantity": 1,
+      "width": 1000,
+      "height": 600,
+      "contours": [
+        [
+          [
+            0,
+            0
+          ],
+          [
+            1000,
+            0
+          ],
+          [
+            0,
+            600
+          ]
+        ]
+      ],
+      "source": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAwbW0iIGhlaWdodD0iNjAwbW0iIHZpZXdCb3g9IjAgMCAxMDAwIDYwMCI+PHBhdGggaWQ9ImN1dCIgZD0iTTAsMCBMMTAwMCwwIEwwLDYwMCBaIiBmaWxsPSIjZGFiNWIwIi8+PGcgZmlsbD0iI2ZmZmRmMCIgb3BhY2l0eT0iMC42NSI+PGNpcmNsZSBjeD0iODAiIGN5PSI4MCIgcj0iMzgiLz48Y2lyY2xlIGN4PSIyNDAiIGN5PSI4MCIgcj0iMzgiLz48Y2lyY2xlIGN4PSI0MDAiIGN5PSI4MCIgcj0iMzgiLz48Y2lyY2xlIGN4PSI1NjAiIGN5PSI4MCIgcj0iMzgiLz48Y2lyY2xlIGN4PSI3MjAiIGN5PSI4MCIgcj0iMzgiLz48Y2lyY2xlIGN4PSI4MCIgY3k9IjI0MCIgcj0iMzgiLz48Y2lyY2xlIGN4PSIyNDAiIGN5PSIyNDAiIHI9IjM4Ii8+PGNpcmNsZSBjeD0iNDAwIiBjeT0iMjQwIiByPSIzOCIvPjxjaXJjbGUgY3g9IjgwIiBjeT0iNDAwIiByPSIzOCIvPjwvZz48L3N2Zz4=",
+      "confirmed": true,
+      "dimensionConfirmed": true,
+      "allow180": true,
+      "bleed": 0,
+      "contourTolerance": 0,
+      "contourSource": "已知毫米坐标的虚构三角裁片"
+    }
+  ],
+  "placements": []
+}

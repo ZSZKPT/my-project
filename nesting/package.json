@@ -1,0 +1,11 @@
+{
+  "name": "buxu-print-nesting",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local digital-print contour nesting workbench",
+  "scripts": {
+    "check": "node --check web/app.js",
+    "test:browser": "node tests/browser.cjs"
+  },
+  "devDependencies": {"playwright": "1.56.0"}
+}

@@ -1,0 +1,4 @@
+numpy==2.5.4
+pillow==11.3.0
+shapely==2.1.2
+svgelements==1.9.6

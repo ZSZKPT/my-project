@@ -1,0 +1,3 @@
+Shapely==2.1.2
+Pillow==11.3.0
+svgelements==1.9.6
