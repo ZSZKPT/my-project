@@ -173,13 +173,13 @@ function showBindingResult(){
  const list=$('bindingResults');list.replaceChildren();if(!bindingMatch){bindingControls();return}
  const m=bindingMatch;$('bindingSummary').textContent=`${m.requested}个已排原图文件：匹配${m.matches.length}张，未找到${m.missing.length}张，重名待处理${m.ambiguous.length}张`;
  for(const match of m.matches){const row=document.createElement('p');row.textContent=`✓ ${match.filename} → ${match.file.relativePath}`;list.append(row)}
- for(const missing of m.missing){const row=document.createElement('p');row.className='error-line';row.textContent=`未找到：${missing.filename}，请检查款号对应的“包边条”图片`;list.append(row)}
+ for(const missing of m.missing){const row=document.createElement('p');row.className='error-line';row.textContent=`未找到：${missing.filename}，请检查同款号文件夹内的同款号“包边条”图片`;list.append(row)}
  for(const ambiguous of m.ambiguous){const row=document.createElement('p');row.className='error-line';row.textContent=`有多个候选：${ambiguous.filename} → ${ambiguous.candidates.map(f=>f.relativePath).join('、')}`;list.append(row)}
  bindingControls();
 }
 async function refreshBinding(){
  const generation=++bindingRevision;bindingMatch=null;bindingControls();
- $('bindingExample').textContent=$('bindingRule').value==='style-prefix'?'示例：YQ-TJGG-44-L-1.jpg → YQ-TJGG-44-包边条.jpg；每个已排原图各复制一张。':$('bindingRule').value==='exact'?'示例：款号-L-1.jpg → 款号-L-1包边条.jpg；可有横线、下划线或空格分隔。':'示例：款号-L-1.jpg、款号-L-2.jpg → 款号-L包边条.jpg；每个原图各取一张。';
+ $('bindingExample').textContent=$('bindingRule').value==='style-folder'?'示例：YQ-TJGG-44-L-1.jpg → YQ-TJGG-44 文件夹 → YQ-TJGG-44-包边条.jpg。':$('bindingRule').value==='style-prefix'?'示例：YQ-TJGG-44-L-1.jpg → YQ-TJGG-44-包边条.jpg；每个已排原图各复制一张。':$('bindingRule').value==='exact'?'示例：款号-L-1.jpg → 款号-L-1包边条.jpg；可有横线、下划线或空格分隔。':'示例：款号-L-1.jpg、款号-L-2.jpg → 款号-L包边条.jpg；每个原图各取一张。';
  if(!$('bindingFolder').dataset.selected)return;
  const reply=await bindingApi().match_binding_files(bindingRequests,$('bindingRule').value);if(generation!==bindingRevision)return;if(reply.error)throw Error(reply.error);
  bindingMatch=reply;showBindingResult();

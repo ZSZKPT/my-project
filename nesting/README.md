@@ -1,6 +1,6 @@
-# 布序 v7 · 数码印花裁片本地排料
+# 布序 v8 · 数码印花裁片本地排料
 
-Windows 下载：[BuxuNesting.exe](https://github.com/ZSZKPT/my-project/releases/download/buxu-desktop-v7/BuxuNesting.exe)。双击运行，所有操作在软件窗口内完成。无需安装Python或Node.js，图片只在本机处理。Windows10/11需要微软WebView2运行时；缺少时会明确提示。
+Windows 下载：[BuxuNesting.exe](https://github.com/ZSZKPT/my-project/releases/download/buxu-desktop-v8/BuxuNesting.exe)。双击运行，所有操作在软件窗口内完成。无需安装Python或Node.js，图片只在本机处理。Windows10/11需要微软WebView2运行时；缺少时会明确提示。
 
 ## 使用
 
@@ -17,9 +17,9 @@ Windows 下载：[BuxuNesting.exe](https://github.com/ZSZKPT/my-project/releases
 
 ## 按已排原图拉取包边条
 
-完成排料后，点击左侧“按已排图片拉取包边条”，选择本机的包边条源文件夹。默认不扫描子文件夹，需要时勾选“包括子文件夹”后重新选择。
+完成排料后，点击左侧“按已排图片拉取包边条”，选择存放各款号文件夹的总目录。默认自动读取总目录及下一层款号文件夹；更深的目录可勾选“搜索更深层文件夹”。也可直接选择单个款号文件夹。
 
-默认按款号匹配。例如 `YQ-TJGG-44-L-1.jpg` 和 `YQ-TJGG-44-M-2.jpg` 都对应 `YQ-TJGG-44-包边条.jpg`，也支持同款号后直接接“包边条”或用下划线、空格分隔。款号必须在完整名称边界匹配，`44`不会误配`4`或`444`。还可主动选择完整文件名匹配或仅去掉末尾序号的规则。
+默认按款号文件夹匹配。例如 `YQ-TJGG-44-L-1.jpg` 和 `YQ-TJGG-44-M-2.jpg` 都进入总目录下的 `YQ-TJGG-44` 文件夹，拉取其中的 `YQ-TJGG-44-包边条.jpg`。要求文件夹名和包边条文件的款号一致；其他文件夹里的同名图片不会被误取。也支持同款号后直接接“包边条”或用下划线、空格分隔。款号必须在完整名称边界匹配，`44`不会误配`4`或`444`。还可主动选择完整文件名匹配或仅去掉末尾序号的规则。
 
 每个**已排原始图片文件**各复制一张包边条，同图自动拆出的左右两片不会重复计算。重复导入的同一文件作为不同原图实例，各复制一张。匹配缺失、同款号有多个候选文件或多个可匹配前缀时明确列出，修正后才能复制，不随意挑选。
 

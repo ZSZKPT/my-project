@@ -31,7 +31,7 @@ class NativeBridge:
 
     def info(self):
         self._check_origin()
-        return {'embedded':True,'version':'7.0','nativeSave':True}
+        return {'embedded':True,'version':'8.0','nativeSave':True}
 
     def choose_binding_folder(self,recursive=False):
         """Read only the folder explicitly selected in the native chooser."""
@@ -43,8 +43,12 @@ class NativeBridge:
             if not chosen:return {'cancelled':True}
             root=Path(chosen[0] if isinstance(chosen,(list,tuple)) else chosen).resolve()
             if not root.is_dir():raise ValueError('请选择有效的包边条文件夹')
+            def immediate_styles():
+                for entry in root.iterdir():
+                    yield entry
+                    if entry.is_dir() and not entry.is_symlink():yield from entry.iterdir()
             files={};count=0
-            for candidate in (root.rglob('*') if recursive else root.iterdir()):
+            for candidate in (root.rglob('*') if recursive else immediate_styles()):
                 count+=1
                 if count>50000:raise ValueError('文件夹超过50000个条目，请缩小选择范围')
                 if not candidate.is_file() or strip_key(candidate.name) is None:continue
@@ -52,12 +56,12 @@ class NativeBridge:
                 if root not in resolved.parents:continue
                 key=uuid.uuid4().hex
                 files[key]={'id':key,'name':candidate.name,'relativePath':str(candidate.relative_to(root)),
-                            'size':resolved.stat().st_size,'path':resolved}
+                            'size':resolved.stat().st_size,'parentName':candidate.parent.name,'path':resolved}
             with self._binding_lock:self._binding_root=root;self._binding_files=files
             return {'folder':str(root),'files':[{k:v for k,v in entry.items() if k!='path'} for entry in files.values()]}
         except Exception as exc:return {'error':str(exc)}
 
-    def match_binding_files(self,requests,rule='style-prefix'):
+    def match_binding_files(self,requests,rule='style-folder'):
         try:
             self._check_origin()
             from binding import match_files
@@ -75,7 +79,7 @@ class NativeBridge:
             if root not in path.parents or not path.is_file():raise ValueError('包边条已移动或不在所选文件夹内')
             return path
 
-    def copy_binding_files(self,requests,rule='style-prefix'):
+    def copy_binding_files(self,requests,rule='style-folder'):
         """One byte-identical strip copy for every original source instance."""
         if not self._save_lock.acquire(blocking=False):return {'error':'正在保存，请等待完成'}
         staging=None

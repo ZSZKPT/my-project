@@ -18,7 +18,7 @@ def normalized(text):
 def source_key(name,rule='exact'):
     stem=normalized(filename_stem(name))
     if rule=='remove-copy-number':stem=re.sub(r'[-_ ]\d+$','',stem)
-    elif rule not in ('exact','style-prefix'):raise ValueError('不支持的文件名匹配规则')
+    elif rule not in ('exact','style-prefix','style-folder'):raise ValueError('不支持的文件名匹配规则')
     return stem.rstrip(' _-')
 
 
@@ -30,7 +30,7 @@ def strip_key(name):
     return stem[:-3].rstrip(' _-')
 
 
-def match_files(requests,files,rule='style-prefix'):
+def match_files(requests,files,rule='style-folder'):
     """One match for each original import instance, never each split panel.
 
     Match only the selected rule and never pick the first ambiguous file. IDs
@@ -47,10 +47,11 @@ def match_files(requests,files,rule='style-prefix'):
         ident=request.get('id');name=request.get('filename')
         if not isinstance(ident,str) or not ident or ident in seen:raise ValueError('原图组ID为空或重复')
         seen.add(ident);key=source_key(name,rule)
-        if rule=='style-prefix':
+        if rule in ('style-prefix','style-folder'):
             candidates=[entry for base,entries in by_key.items()
                         if key==base or (base and key.startswith(base) and key[len(base):len(base)+1] in ('-','_',' '))
-                        for entry in entries]
+                        for entry in entries
+                        if rule!='style-folder' or normalized(entry.get('parentName',''))==base]
         else:candidates=by_key.get(key,[])
         item={'id':ident,'filename':name,'key':key}
         if len(candidates)==1:matches.append({**item,'file':candidates[0]})
