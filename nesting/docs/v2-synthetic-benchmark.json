@@ -1,0 +1,11 @@
+{
+  "synthetic": true,
+  "sourceFiles": 16,
+  "actualPanels": 32,
+  "baselineMm": 540.6331229454546,
+  "bestMm": 335.97326078181817,
+  "valid": true,
+  "acceptedMoves": 8,
+  "seconds": 8.7414079079972,
+  "timedOut": true
+}
