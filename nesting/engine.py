@@ -3,9 +3,17 @@ import random
 import time
 from shapely import affinity
 from shapely.strtree import STRtree
+from shapely.ops import unary_union
 from geometry import prepare, validate, oriented, placed, conflicts, EPS
 
 class Interrupted(Exception):pass
+
+def grouped_order(order,instances):
+    units={}
+    for key in order:
+        item=instances[key];gid=item.get('sourceGroup') if item.get('verticalOnly') else key
+        units.setdefault(gid,[]).append(key)
+    return list(units.values())
 
 def vertices(g,limit=24):
     polys=[g] if g.geom_type=='Polygon' else g.geoms
@@ -18,25 +26,45 @@ def baseline(order,instances,s,locks):
     result=list(locks)
     y=max([placed(instances[p['key']],p).bounds[3]+s['gap'] for p in locks],default=s['head'])
     x=s['left']; rowheight=0
-    for key in order:
-        g=instances[key]['occupied'];a,b,c,d=g.bounds;w=c-a;h=d-b
+    for unit in grouped_order(order,instances):
+        first=instances[unit[0]]
+        relatives=[p for p in locks if first.get('verticalOnly') and instances[p['key']].get('sourceGroup')==first.get('sourceGroup')]
+        if relatives:
+            for key in unit:
+                angle=relatives[0]['angle'];g=oriented(instances[key],angle)
+                top=max([placed(instances[p['key']],p).bounds[3] for p in result],default=s['head'])
+                result.append({'key':key,'pieceId':instances[key]['id'],'x':relatives[0]['x'],'y':top+s['gap']-g.bounds[1],'angle':angle,'locked':False})
+            y=max(placed(instances[p['key']],p).bounds[3] for p in result)+s['gap'];x=s['left'];rowheight=0
+            continue
+        joined=unary_union([instances[k]['occupied'] for k in unit]);a,b,c,d=joined.bounds;w=c-a
         if x+w>s['width']-s['right']+EPS:
             x=s['left'];y+=rowheight+s['gap'];rowheight=0
-        result.append({'key':key,'pieceId':instances[key]['id'],'x':x-a,'y':y-b,'angle':0,'locked':False})
-        x+=w+s['gap'];rowheight=max(rowheight,h)
+        additions=[]
+        for key in unit:
+            candidate={'key':key,'pieceId':instances[key]['id'],'x':x-a,'y':y-b,'angle':0,'locked':False}
+            shape=placed(instances[key],candidate)
+            if any(conflicts(shape,placed(instances[p['key']],p),s['gap']) for p in additions):
+                candidate['y']=max(placed(instances[p['key']],p).bounds[3] for p in additions)+s['gap']-instances[key]['occupied'].bounds[1]
+            additions.append(candidate)
+        result.extend(additions)
+        rowheight=max(rowheight,max(placed(instances[p['key']],p).bounds[3] for p in additions)-y)
+        x+=w+s['gap']
     return result
 
 def pack(order,instances,s,locks,deadline,stop,orientation_cache=None):
     if orientation_cache is None:orientation_cache={}
     result=list(locks); geoms=[placed(instances[p['key']],p) for p in result]
-    for key in order:
+    for key in [k for unit in grouped_order(order,instances) for k in unit]:
         if time.monotonic()>deadline or stop.is_set():raise Interrupted()
         part=instances[key];best=None
         tree=STRtree(geoms)
         obstacle_points=[v for g in geoms for v in vertices(g,12)]
         if len(obstacle_points)>200:obstacle_points=obstacle_points[::max(1,len(obstacle_points)//200)][:200]
         top=max([g.bounds[3] for g in geoms],default=s['head'])
-        for angle in ([0,180] if part.get('allow180',True) else [0]):
+        relatives=[p for p in result if part.get('verticalOnly') and instances[p['key']].get('sourceGroup')==part.get('sourceGroup')]
+        family=[p for p in instances.values() if part.get('verticalOnly') and p.get('sourceGroup')==part.get('sourceGroup')]
+        angles=[relatives[0]['angle']] if relatives else ([0,180] if part.get('allow180',True) and all(p.get('allow180',True) for p in family) else [0])
+        for angle in angles:
             cache_key=(key,angle)
             if cache_key not in orientation_cache:
                 g=oriented(part,angle);orientation_cache[cache_key]=(g,g.bounds,vertices(g,12))
@@ -49,7 +77,12 @@ def pack(order,instances,s,locks,deadline,stop,orientation_cache=None):
                     ys.update((v[1]-q[1]-s['gap'],v[1]-q[1]+s['gap']))
             # Regular horizontal candidates improve placements between vertex contacts.
             for i in range(25):xs.add(s['left']-a+(s['width']-s['right']-s['left']-(c-a))*i/24)
-            xs=sorted(x for x in xs if x+a>=s['left']-EPS and x+c<=s['width']-s['right']+EPS)
+            bound_a,bound_c=a,c
+            if family:
+                bound_a=min(oriented(p,angle).bounds[0] for p in family);bound_c=max(oriented(p,angle).bounds[2] for p in family)
+                xs.update((s['left']-bound_a,s['width']-s['right']-bound_c))
+            if relatives:xs={relatives[0]['x']}
+            xs=sorted(x for x in xs if x+bound_a>=s['left']-EPS and x+bound_c<=s['width']-s['right']+EPS)
             ys=sorted(y for y in ys if y+b>=s['head']-EPS)
             # Bound candidate search; shelf fallback always remains available.
             if len(xs)>100:xs=sorted(set(xs[::max(1,len(xs)//90)]+xs[:6]+xs[-6:]))

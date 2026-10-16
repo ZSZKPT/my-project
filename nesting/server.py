@@ -7,13 +7,14 @@ import threading
 import time
 import uuid
 import traceback
+import logging
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 from assets import import_asset,FragmentedContour
 from geometry import validate
 from engine import solve
-from exporting import production_zip,svg_document,csv_text
+from exporting import production_zip,svg_document,csv_text,production_jpg,jpg_zip
 
 ROOT=Path(__file__).parent
 JOBS={};MUTEX=threading.Lock()
@@ -30,6 +31,9 @@ def run_job(job,raw):
         with MUTEX:job.update(state='error',error=str(exc))
 
 class Handler(BaseHTTPRequestHandler):
+    def log_message(self,format,*args):
+        # Windowed Windows EXEs have no sys.stderr stream.
+        logging.getLogger('buxu.http').info(format,*args)
     def send(self,data,status=200,ctype='application/json; charset=utf-8',filename=None):
         if not isinstance(data,bytes):data=json.dumps(data,ensure_ascii=False).encode() if ctype.startswith('application/json') else data.encode()
         self.send_response(status);self.send_header('Content-Type',ctype);self.send_header('Content-Length',str(len(data)))
@@ -99,6 +103,8 @@ class Handler(BaseHTTPRequestHandler):
                     job['stop'].set()
                 return self.send({'ok':True})
             if path=='/api/export/svg':return self.send(svg_document(raw['project']),ctype='image/svg+xml',filename='layout-1to1.svg')
+            if path=='/api/export/jpg':return self.send(production_jpg(raw['project']),ctype='image/jpeg',filename='layout-110dpi.jpg')
+            if path=='/api/export/jpg-zip':return self.send(jpg_zip(raw['project'],raw.get('segmentMm',2000)),ctype='application/zip',filename='production-jpg-110dpi.zip')
             if path=='/api/export/csv':
                 v=validate(raw['project'])
                 if not v['valid']:raise ValueError('校验失败，不能导出')

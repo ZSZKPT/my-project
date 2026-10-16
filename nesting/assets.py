@@ -6,8 +6,8 @@ import uuid
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from PIL import Image, ImageChops
-from shapely.geometry import box, Polygon
-from shapely.ops import unary_union
+from shapely.geometry import box, Polygon, LineString
+from shapely.ops import unary_union,nearest_points
 from svgelements import SVG, Shape, Path as SVGPath, Move, Close, Line
 from geometry import number, rings
 
@@ -54,6 +54,8 @@ def physical(value):
 
 def raster_contour(image,mode,threshold,bg,min_area):
     if mode=='rectangle':return box(0,0,*image.size),True
+    paired=mode=='garment-pair'
+    if paired:mode='background'
     hull=mode.endswith('-hull')
     mode=mode.removesuffix('-hull')
     if mode=='alpha':
@@ -78,12 +80,50 @@ def raster_contour(image,mode,threshold,bg,min_area):
             if len(rects)>150000:raise ValueError('轮廓噪点过多，请提高背景阈值、清理原图或使用SVG切割线')
     if not rects:raise ValueError('未识别到裁片，请调整阈值')
     g=unary_union(rects);polys=[g] if g.geom_type=='Polygon' else list(g.geoms)
+    if paired:
+        # Fill closed cut-line interiors before selecting the two bodies. Nested
+        # print islands must not be confused with separate garment panels.
+        return unary_union([Polygon(p.exterior) for p in polys]),False
     # Hull mode intentionally preserves every detected foreground component.
     if hull:return g.convex_hull,False
     polys=[Polygon(p.exterior) for p in polys if p.area>=min_area]
     if not polys:raise ValueError('去噪后轮廓为空')
     if len(polys)>100:raise FragmentedContour(polys)
     return unary_union(polys),False
+
+def split_garment_pair(g,base):
+    polys=[g] if g.geom_type=='Polygon' else list(g.geoms)
+    polys.sort(key=lambda p:-p.area)
+    if len(polys)<2 or polys[1].area<polys[0].area*.03:
+        raise ValueError('未找到两个明确的裁片主体；请检查白底原图或改用单片导入，不会静默丢弃内容')
+    anchors=sorted(polys[:2],key=lambda p:p.centroid.x)
+    if anchors[1].centroid.x-anchors[0].centroid.x<base['width']*.15:
+        raise ValueError('两个主体没有明确左右关系，请检查原图或改用单片模式')
+    groups=anchors[:]
+    for poly in polys[2:]:
+        index=min(range(2),key=lambda i:anchors[i].distance(poly))
+        a,b=nearest_points(groups[index],poly)
+        # Join detached tags/noise conservatively, retaining every recognized
+        # foreground pixel. Never use a convex hull around the garment itself.
+        bridge=LineString([a,b]).buffer(.03)
+        groups[index]=unary_union([groups[index],poly,bridge])
+    result=[]
+    for i,original in enumerate(groups):
+        tolerance=.5*base['width']/base['pixelWidth']
+        shape=original.simplify(tolerance,preserve_topology=True).buffer(tolerance+.00001)
+        shape=shape.intersection(box(0,0,base['width'],base['height']))
+        if not shape.covers(original):shape=original
+        shape=unary_union([Polygon(p.exterior) for p in ([shape] if shape.geom_type=='Polygon' else shape.geoms)])
+        side='left' if i==0 else 'right'
+        result.append({**base,'id':base['id']+'-'+side,'sourceGroup':base['id'],'sourcePart':side,
+            'verticalOnly':True,'sourcePartCount':2,'name':base['name']+(' · 左片' if i==0 else ' · 右片'),
+            'contours':rings(shape),'confirmed':True,
+            'contourSource':'左右双片：保持横向关系、仅上下错位；保留二维码/连接条/尺码与全部识别前景'})
+    if not unary_union([polygon_from_rings(p['contours']) for p in result]).covers(g):
+        raise ValueError('双片完整性复核失败，已阻止导入')
+    return {'splitPieces':result,'sourceFiles':1,'dpi':base['dpi']}
+
+def polygon_from_rings(contours):return unary_union([Polygon(r) for r in contours])
 
 def import_asset(request):
     raw=decode_data(request.get('data',''));filename=Path(request.get('filename','裁片')).name
@@ -123,15 +163,16 @@ def import_asset(request):
             dimensionConfirmed=bool((physical(root.get('width')) and physical(root.get('height'))) or (request.get('width') and request.get('height'))),
             contourSource=f'SVG #{selector or selectors[0].id or "唯一轮廓"}；曲线采样，保守余量0.1mm',svgElements=ids,mime='image/svg+xml')
         return base
-    image=Image.open(io.BytesIO(raw));image.load()
+    image=Image.open(io.BytesIO(raw))
     if image.format not in ('PNG','JPEG'):raise ValueError('首版仅支持JPG/JPEG、PNG、SVG')
     if image.width*image.height>20_000_000:raise ValueError('单图最多2000万像素，请分片或提供矢量轮廓')
+    image.load()
     orientation=image.getexif().get(274,1)
     if orientation!=1:raise ValueError('JPG含EXIF旋转，请先将方向实际应用并另存，避免尺寸方向歧义')
     dpi=image.info.get('dpi')
     if dpi and not all(10<=float(v)<=2400 for v in dpi[:2]):dpi=None
     supplied=bool(request.get('width') and request.get('height'))
-    explicit_dpi=request.get('dpi')
+    explicit_dpi=request.get('dpi') or (110 if request.get('mode')=='garment-pair' else None)
     if explicit_dpi:
         n=number(explicit_dpi,'DPI',10,2400);dpi=(n,n)
     w=number(request.get('width') or (image.width*25.4/dpi[0] if dpi else image.width),'宽度',.01,10000)
@@ -146,4 +187,5 @@ def import_asset(request):
         dimensionConfirmed=bool(supplied or dpi),mime='image/jpeg' if image.format=='JPEG' else 'image/png',
         contourSource='明确选择的矩形' if rectangle else ('保守凸包：保留全部识别前景并填补凹口/间隙，不等于真实裁切线（必须核对）' if mode.endswith('-hull') else ('透明通道像素外轮廓' if mode=='alpha' else f'背景颜色识别候选；去噪阈值{min_area:g}像素²（必须人工核对）')),
         hasICC=bool(image.info.get('icc_profile')),mode=mode,threshold=threshold)
+    if mode=='garment-pair':return split_garment_pair(g,base)
     return base

@@ -75,6 +75,21 @@ def prepare(raw):
         catalog[pid]=item
         for i in range(int(q)):instances[f'{pid}::{i}']=item
     if len(instances)>500:raise ValueError('首版单任务最多500片，请分批排料')
+    groups={}
+    for p in catalog.values():
+        if p.get('verticalOnly'):
+            gid=p.get('sourceGroup')
+            if not isinstance(gid,str) or not gid:raise ValueError('双片缺少原文件组ID')
+            groups.setdefault(gid,[]).append(p)
+    for parts in groups.values():
+        if len(parts)!=2 or {p.get('sourcePart') for p in parts}!={'left','right'}:
+            raise ValueError('同一原图的左右两片必须同时保留，不能缺片')
+        a,b=parts
+        if a['source']!=b['source'] or a['width']!=b['width'] or a['height']!=b['height']:
+            raise ValueError('同组两片必须使用相同原图、110DPI尺寸及坐标框架')
+        bounds=unary_union([p['occupied'] for p in parts]).bounds
+        if bounds[2]-bounds[0]>s['width']-s['left']-s['right']+EPS:
+            raise ValueError('同组左右片总宽度超过有效门幅，不能单独横移或缩放')
     return s,catalog,instances
 
 def oriented(piece,angle,occupied=True):
@@ -110,6 +125,13 @@ def validate(raw, partial=False):
             checked.append(p);geoms.append(g)
         except (ValueError,KeyError,TypeError) as exc:errors.append({'keys':[source.get('key','?')],'message':str(exc)})
     tree=STRtree(geoms)
+    grouped={}
+    for p in checked:
+        item=instances[p['key']]
+        if item.get('verticalOnly'):grouped.setdefault(item['sourceGroup'],[]).append(p)
+    for parts in grouped.values():
+        if any(abs(p['x']-parts[0]['x'])>EPS or p['angle']!=parts[0]['angle'] for p in parts):
+            errors.append({'keys':[p['key'] for p in parts],'message':'同组左右片只能上下错位，横向基准及整体方向必须一致'})
     for i,g in enumerate(geoms):
         for j in tree.query(g.buffer(s['gap']+EPS)):
             j=int(j)

@@ -18,13 +18,20 @@ test_jpg_background_and_missing_dpi (test_nesting.ImportTests.test_jpg_backgroun
 test_png_holes_filled (test_nesting.ImportTests.test_png_holes_filled) ... ok
 test_svg_units_transforms_selection_curves (test_nesting.ImportTests.test_svg_units_transforms_selection_curves) ... ok
 test_unsafe_svg_rejected (test_nesting.ImportTests.test_unsafe_svg_rejected) ... ok
+test_auto_pair_110dpi_keeps_qr_tab_and_neck_concavity (test_pair_jpg.PairJpgTests.test_auto_pair_110dpi_keeps_qr_tab_and_neck_concavity) ... ok
+test_group_vertical_only_and_complete_membership (test_pair_jpg.PairJpgTests.test_group_vertical_only_and_complete_membership) ... ok
+test_jpg_110dpi_white_background_and_preserved_source_marks (test_pair_jpg.PairJpgTests.test_jpg_110dpi_white_background_and_preserved_source_marks) ... ok
+test_locked_sibling_keeps_group_x_and_angle (test_pair_jpg.PairJpgTests.test_locked_sibling_keeps_group_x_and_angle) ... ok
+test_long_single_jpg_uses_disk_backed_strips (test_pair_jpg.PairJpgTests.test_long_single_jpg_uses_disk_backed_strips) ... /workspace/my-project/nesting/.venv/lib/python3.12/site-packages/PIL/Image.py:3452: DecompressionBombWarning: Image size (37446273 pixels) exceeds limit of 20000000 pixels, could be decompression bomb DOS attack.
+  warnings.warn(
+ok
 test_existing_healthy_server_opens_browser_without_duplicate_server (test_windows_bootstrap.WindowsStartupTests.test_existing_healthy_server_opens_browser_without_duplicate_server) ... ok
 test_install_failure_keeps_error_and_does_not_open_browser (test_windows_bootstrap.WindowsStartupTests.test_install_failure_keeps_error_and_does_not_open_browser) ... ok
 test_old_python_logs_actionable_error_without_launching (test_windows_bootstrap.WindowsStartupTests.test_old_python_logs_actionable_error_without_launching) ... ok
 
 ----------------------------------------------------------------------
-Ran 23 tests in 1.298s
+Ran 28 tests in 6.596s
 
 OK
 
-100文件测试：1.003s，Python峰值分配0.33MiB（不含GEOS原生内存）
+100文件测试：1.001s，Python峰值分配0.33MiB（不含GEOS原生内存）
