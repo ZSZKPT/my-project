@@ -21,15 +21,19 @@ jobs:
           cache: pip
           cache-dependency-path: nesting/requirements.lock
       - name: Install pinned dependencies and packager
+        id: install
         run: |
           python -m pip install -r nesting/requirements.lock
           python -m pip install pyinstaller==6.16.0
       - name: Test geometry, paired panels, and labels
+        id: tests
         run: python -m unittest discover -s nesting/tests -v
       - name: Build self-contained EXE
+        id: package
         working-directory: nesting
         run: python -m PyInstaller --noconfirm --clean --onefile --windowed --name BuxuNesting --collect-all shapely --collect-all svgelements --add-data "web;web" --add-data "examples;examples" desktop_launcher.py
       - name: Execute packaged self-test on Windows
+        id: selftest
         shell: pwsh
         run: |
           $p = Start-Process -FilePath 'nesting/dist/BuxuNesting.exe' -ArgumentList '--self-test' -PassThru
@@ -44,6 +48,7 @@ jobs:
           path: nesting/dist/BuxuNesting.exe
           if-no-files-found: error
       - name: Publish executable download
+        id: release
         env:
           GH_TOKEN: ${{ github.token }}
         shell: pwsh
@@ -57,6 +62,7 @@ jobs:
           gh release upload $tag nesting/dist/BuxuNesting.exe --clobber --repo $env:GITHUB_REPOSITORY
           if ($LASTEXITCODE -ne 0) { throw 'EXE upload failed' }
       - name: Publish verified binary branch
+        id: binary
         shell: pwsh
         run: |
           Copy-Item nesting/dist/BuxuNesting.exe "$env:RUNNER_TEMP/BuxuNesting.exe"
@@ -77,3 +83,23 @@ jobs:
           git commit -m "Publish verified Buxu Windows EXE"
           git push origin HEAD:refs/heads/buxu-windows-builds
           if ($LASTEXITCODE -ne 0) { throw 'Binary branch push failed' }
+      - name: Publish build result for Git-based verification
+        if: always()
+        shell: pwsh
+        run: |
+          git fetch origin buxu-build-status *> $null
+          if ($LASTEXITCODE -eq 0) {
+            git switch --force-create buxu-build-status FETCH_HEAD
+          } else {
+            git switch --orphan buxu-build-status
+          }
+          $report = @{status='${{ job.status }}';sourceCommit=$env:GITHUB_SHA;runId=$env:GITHUB_RUN_ID;install='${{ steps.install.outcome }}';tests='${{ steps.tests.outcome }}';package='${{ steps.package.outcome }}';selftest='${{ steps.selftest.outcome }}';release='${{ steps.release.outcome }}';binary='${{ steps.binary.outcome }}'}
+          $log = "$env:LOCALAPPDATA/BuxuNesting/desktop.log"
+          if (Test-Path $log) { $report.selfTestLog = Get-Content $log -Raw }
+          $report | ConvertTo-Json | Out-File build-status.json -Encoding utf8
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add build-status.json
+          git commit -m 'Record Buxu Windows build result'
+          git push origin HEAD:refs/heads/buxu-build-status
+          if ($LASTEXITCODE -ne 0) { throw 'Build status push failed' }
