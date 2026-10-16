@@ -78,3 +78,10 @@
 新增5项保存桥接测试：实际110DPI JPG写入、取消不覆盖现有文件、外部导航无法调用保存桥、无效几何在选择路径前被拦截、JSON项目原子写入及临时文件清理。原生保存只允许本软件的随机本机源访问，不提供任意路径后台写入。生产JPG在Python端直接生成后保存，避免大型图像经过JS base64传输；项目和预览通过原生保存接口处理。
 
 Windows打包增加pywebview、pythonnet、clr_loader和WebView2互操作程序集。编译后EXE必须通过内嵌WebView2窗口自测，不能仅凭几何/HTTP自测宣称桌面界面已运行。
+
+
+## v3实际Windows窗口验证完成
+
+构建38876206819成功，源码提交ae3467cbe8c4fcd947772279e2067a3c35e14a95。Windows38项测试全部通过（9.826秒）。编译后EXE几何/HTTP自测通过，并真正启动WebView2独立窗口：主页/CSS/JS加载正常，DOM及110DPI值正确，JS调用原生info接口返回embedded=true。窗口自测日志明确记录“Embedded WebView2 window self-test passed; native bridge ready; 110 DPI”。
+
+下载返回HTTP206与MZ头，EXE为36,917,371字节。原生保存JS集成单独验证项目保存、直接JPG导出桥、取消和错误提示，无浏览器download事件及导出HTTP传输；文件系统桥接测试验证实际110DPI图像写入。原生OS另存为对话框的人工交互及用户实际打印设备不属于自动化测试证据。
