@@ -216,16 +216,20 @@ def _solve_panels(raw,stop,progress=lambda value:None):
     progress(report)
     rng=random.Random(s['seed']);deadline=started+s['seconds'];best_order=geometric_orders[0] if geometric_orders else order[:];orientation_cache={}
     score=layout_score(best['placements'],instances)
-    def accept(candidate,phase,unused=0):
+    def accept(candidate,phase,unused=0,reject_invalid=False):
         nonlocal best,score,report,moves
         candidate_score=layout_score(candidate,instances)
         if candidate_score>=score:return False
         checked=validate({**raw,'placements':candidate})
-        if not checked['valid']:raise ValueError('压紧/回填方案独立复核失败：'+checked['errors'][0]['message'])
+        if not checked['valid']:
+            if reject_invalid:return False
+            raise ValueError('压紧/回填方案独立复核失败：'+checked['errors'][0]['message'])
         best=checked;score=candidate_score;moves+=1
         report={**best,'comparison':comparison.copy(),'iterations':0,'seconds':time.monotonic()-started,'timedOut':False,'stopped':False,'phase':phase,'acceptedMoves':moves}
         progress(report)
         return True
+    from grid_search import search
+    grid_rounds=search(order,instances,s,locks,best['placements'],min(deadline,started+s['seconds']*.7),stop,lambda candidate,phase:accept(candidate,phase,reject_invalid=True))
     compact_complete(best['placements'],instances,s,deadline,stop,accept,axis='x')
     compact_complete(best['placements'],instances,s,deadline,stop,accept)
     # Reinsert a complete source group into earlier gaps, from the roll tail
@@ -264,7 +268,7 @@ def _solve_panels(raw,stop,progress=lambda value:None):
             compact_complete(best['placements'],instances,s,deadline,stop,accept)
         report={**best,'comparison':comparison.copy(),'iterations':iteration+1,'seconds':time.monotonic()-started,'timedOut':False,'stopped':False,'phase':'多起点搜索','acceptedMoves':moves}
         progress(report)
-    report.update(seconds=time.monotonic()-started,timedOut=time.monotonic()>=deadline,stopped=stop.is_set(),warmStarted=warm)
+    report.update(gridRounds=grid_rounds,seconds=time.monotonic()-started,timedOut=time.monotonic()>=deadline,stopped=stop.is_set(),warmStarted=warm)
     report['comparison']=comparison+[{'label':'当前找到的最佳方案','length':best['stats']['length'],'effectiveUtilization':best['stats']['effectiveUtilization'],'seconds':report['seconds']}]
     progress(report)
     return report
