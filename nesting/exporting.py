@@ -140,13 +140,13 @@ def svg_document(raw,start=0,length=None,labels=False):
 
 def csv_text(raw):
     s,catalog,instances=prepare(raw);out=io.StringIO();writer=csv.writer(out)
-    writer.writerow(['实例ID','文件','款号','尺码','X_mm','Y_mm','角度','锁定','原文件组','左右片','仅上下错位'])
+    writer.writerow(['实例ID','文件','款号','尺码','X_mm','Y_mm','角度','锁定','原文件组','左右片','固定原图相对位置'])
     def safe(value):
         value=str(value)
         return "'"+value if value.startswith(('=','+','-','@','\t','\r')) else value
     for p in raw['placements']:
         item=instances[p['key']]
-        writer.writerow([safe(p['key']),safe(item.get('filename',item['name'])),safe(item.get('style','')),safe(item.get('size','')),p['x'],p['y'],p['angle'],p.get('locked',False),safe(item.get('sourceGroup','')),safe(item.get('sourcePart','')),item.get('verticalOnly',False)])
+        writer.writerow([safe(p['key']),safe(item.get('filename',item['name'])),safe(item.get('style','')),safe(item.get('size','')),p['x'],p['y'],p['angle'],p.get('locked',False),safe(item.get('sourceGroup','')),safe(item.get('sourcePart','')),item.get('fixedPair',False)])
     return '\ufeff'+out.getvalue()
 
 def production_zip(raw,segment=2000):
@@ -171,5 +171,5 @@ def production_zip(raw,segment=2000):
         z.writestr('positions.csv',csv_text(raw))
         z.writestr('project.nest.json',json.dumps(raw,ensure_ascii=False))
         z.writestr('manifest.json',json.dumps({'unit':'mm','scale':'1:1','segments':manifest,'stats':result['stats']},ensure_ascii=False,indent=2))
-        z.writestr('PRINT-README.txt','生产SVG使用毫米尺寸、1:1比例。双片按原始像素及110DPI换算，同组只允许上下错位，整体可0/180度旋转。原图中的二维码、连接条和尺码标签参与占用及净间距检查，并随所属裁片打印；界面辅助标签不输出。各段连续无重叠，严格按manifest顺序输出。打印软件关闭适应页面/缩放及自动拼接重叠。先用100mm校准方块验证尺寸、二维码可读性和拼接。没有ICC转换；保留嵌入素材字节。轮廓识别为自动候选，不会自动补造出血图像。')
+        z.writestr('PRINT-README.txt','生产SVG使用毫米尺寸、1:1比例。双片按原始像素及110DPI换算，同组保持原始相对位置，仅整组移动，整体可0/180度旋转。原图中的二维码、连接条和尺码标签参与占用及净间距检查，并随所属裁片打印；界面辅助标签不输出。各段连续无重叠，严格按manifest顺序输出。打印软件关闭适应页面/缩放及自动拼接重叠。先用100mm校准方块验证尺寸、二维码可读性和拼接。没有ICC转换；保留嵌入素材字节。轮廓识别为自动候选，不会自动补造出血图像。')
     return out.getvalue()
