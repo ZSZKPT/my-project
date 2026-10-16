@@ -72,7 +72,7 @@ def main():
         webview.settings['ALLOW_DOWNLOADS']=True
         webview.settings['ALLOW_FILE_URLS']=False
         webview.settings['OPEN_EXTERNAL_LINKS_IN_BROWSER']=False
-        window=webview.create_window('布序 v6 · 本地排料工作台',url,js_api=bridge,
+        window=webview.create_window('布序 v7 · 本地排料工作台',url,js_api=bridge,
             width=1440,height=960,min_size=(1000,700),background_color='#f6f5f0')
         bridge._window=window
         state={'passed':False,'error':None}
@@ -85,7 +85,7 @@ def main():
                 if not args.window_test:return
                 if not window.events.loaded.wait(45):raise RuntimeError('软件界面加载超时')
                 for _ in range(100):
-                    dom=window.evaluate_js("Boolean(document.getElementById('solve') && document.getElementById('exportJpg') && window.pywebview && window.pywebview.api)")
+                    dom=window.evaluate_js("Boolean(document.getElementById('solve') && document.getElementById('exportJpg') && document.getElementById('binding') && window.pywebview && window.pywebview.api && typeof window.pywebview.api.choose_binding_folder === 'function' && typeof window.pywebview.api.copy_binding_files === 'function')")
                     if dom:break
                     time.sleep(.2)
                 else:raise RuntimeError('内嵌界面或原生保存接口未就绪')

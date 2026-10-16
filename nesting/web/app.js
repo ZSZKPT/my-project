@@ -48,7 +48,7 @@ function renderStats(){const stats=result?.stats,total=project.pieces.length;$('
  $('resultMessage').textContent=stats?`全图预览，可向下滚动查看所有裁片 · 有效门幅 ${stats.effectiveWidth.toFixed(1)} mm · 完整门幅利用率 ${(stats.fullUtilization*100).toFixed(1)}% · 净面积 ${(stats.netArea/1e6).toFixed(3)} m² · 出血/保守余量占用 ${((stats.occupiedArea-stats.netArea)/1e6).toFixed(3)} m² · 面积下界 ${(stats.areaLowerBound/1000).toFixed(3)} m（仅供参考）${result.seconds!==undefined?` · 已计算 ${result.seconds.toFixed(2)} s / ${result.iterations} 轮${result.gridRounds?` + ${result.gridRounds}轮整组换位`:''} · ${result.phase||'搜索'} · 已保留${result.acceptedMoves||0}次改善${result.timedOut?'，达到时间上限':''}${result.stopped?'，已停止':''}`:''}`:'默认110 DPI、轮廓净间距3 mm；左右双片保持原始相对位置、整组排料，原图标签随片打印。';
  $('errorList').replaceChildren();for(const error of (result?.errors||[]).slice(0,8)){const line=document.createElement('div');line.className='error-line';line.textContent=`${error.message}：${error.keys.map(k=>findPiece(k.split('::')[0])?.name||k).slice(0,5).join('、')}`;$('errorList').append(line)}
  $('comparison').replaceChildren();for(const item of result?.comparison||[]){const card=document.createElement('div');card.textContent=item.label;const number=document.createElement('strong');number.textContent=`${(item.length/1000).toFixed(3)} m`;const text=document.createElement('span');text.textContent=`利用率 ${(item.effectiveUtilization*100).toFixed(1)}% · ${item.seconds.toFixed(2)} s`;card.append(number,text);$('comparison').append(card)}
- $('solve').disabled=busy||!total;$('stop').hidden=!busy;$('stop').disabled=!jobId;['importBtn','importLink','demo','openProject','saveProject','export','validateBtn','emptyDemo'].forEach(k=>$(k).disabled=busy);settingKeys.forEach(k=>$(k).disabled=busy);$('mode').disabled=busy;$('undo').disabled=busy||!past.length;$('redo').disabled=busy||!future.length;
+ $('solve').disabled=busy||!total;$('stop').hidden=!busy;$('stop').disabled=!jobId;['importBtn','importLink','demo','openProject','saveProject','export','validateBtn','emptyDemo','binding'].forEach(k=>$(k).disabled=busy);settingKeys.forEach(k=>$(k).disabled=busy);$('mode').disabled=busy;$('undo').disabled=busy||!past.length;$('redo').disabled=busy||!future.length;
 }
 function render(){renderList();renderCanvas();renderStats();updateInspector()}
 async function check(){syncSettings();const rev=++revision;const current=await api('/api/validate',project);if(rev!==revision)return current;const previous=result;result={...current,...(previous?.comparison?{comparison:previous.comparison,seconds:previous.seconds,iterations:previous.iterations,timedOut:previous.timedOut,stopped:previous.stopped,phase:previous.phase,acceptedMoves:previous.acceptedMoves,gridRounds:previous.gridRounds}:{})};render();return current}
@@ -152,3 +152,55 @@ $('exportSvg').onclick=guarded(()=>checkedExport('/api/export/svg','布序排料
 $('exportPng').onclick=guarded(async()=>{const blob=await fetchExport('/api/export/svg',{project},false),url=URL.createObjectURL(blob);try{const image=new Image();await new Promise((resolve,reject)=>{image.onload=resolve;image.onerror=()=>reject(Error('预览渲染失败'));image.src=url});const s=result?.stats|| (await api('/api/validate',project)).stats;let w=1600,h=Math.ceil(w*s.length/project.settings.width);if(h>8000){w=Math.max(1,Math.floor(w*8000/h));h=8000}const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const context=canvas.getContext('2d');context.fillStyle='#fff';context.fillRect(0,0,w,h);context.drawImage(image,0,0,w,h);context.fillStyle='#b54732';context.font=`${Math.max(9,w/70)}px sans-serif`;context.fillText('低分辨率预览 · 非生产比例',10,Math.max(20,w/50));const output=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));if(!output)throw Error('PNG生成失败');await download(output,'排料预览-非生产.png')}finally{URL.revokeObjectURL(url)}});
 window.addEventListener('beforeunload',e=>{if(project.pieces.length){e.preventDefault();e.returnValue=''}});
 syncSettings();render();api('/api/health').catch(()=>toast('本地服务未连接，请按README启动'));
+
+
+let bindingRequests=[],bindingMatch=null,bindingBusy=false,bindingRevision=0;
+function bindingApi(){const native=window.pywebview?.api;if(!native?.choose_binding_folder)throw Error('请使用新版Windows EXE，通过本机文件夹选择器拉取包边条');return native}
+function bindingSources(){
+ const placed=new Set(project.placements.map(p=>p.pieceId));const groups=new Map();
+ for(const p of project.pieces){if(!placed.has(p.id)||p.role==='binding-strip'||p.bindingFor)continue;
+  const id=p.sourceGroup||p.id;if(!groups.has(id))groups.set(id,{id,filename:p.filename||p.name});
+ }
+ return [...groups.values()];
+}
+function bindingControls(){
+ const complete=!!bindingMatch&&bindingMatch.matches.length===bindingRequests.length&&!bindingMatch.missing.length&&!bindingMatch.ambiguous.length;
+ $('bindingChoose').disabled=bindingBusy;$('bindingRule').disabled=bindingBusy;$('bindingRecursive').disabled=bindingBusy;
+ $('bindingCopy').disabled=bindingBusy||!complete;
+
+}
+function showBindingResult(){
+ const list=$('bindingResults');list.replaceChildren();if(!bindingMatch){bindingControls();return}
+ const m=bindingMatch;$('bindingSummary').textContent=`${m.requested}个已排原图文件：匹配${m.matches.length}张，未找到${m.missing.length}张，重名待处理${m.ambiguous.length}张`;
+ for(const match of m.matches){const row=document.createElement('p');row.textContent=`✓ ${match.filename} → ${match.file.relativePath}`;list.append(row)}
+ for(const missing of m.missing){const row=document.createElement('p');row.className='error-line';row.textContent=`未找到：${missing.filename}，请检查款号对应的“包边条”图片`;list.append(row)}
+ for(const ambiguous of m.ambiguous){const row=document.createElement('p');row.className='error-line';row.textContent=`有多个候选：${ambiguous.filename} → ${ambiguous.candidates.map(f=>f.relativePath).join('、')}`;list.append(row)}
+ bindingControls();
+}
+async function refreshBinding(){
+ const generation=++bindingRevision;bindingMatch=null;bindingControls();
+ $('bindingExample').textContent=$('bindingRule').value==='style-prefix'?'示例：YQ-TJGG-44-L-1.jpg → YQ-TJGG-44-包边条.jpg；每个已排原图各复制一张。':$('bindingRule').value==='exact'?'示例：款号-L-1.jpg → 款号-L-1包边条.jpg；可有横线、下划线或空格分隔。':'示例：款号-L-1.jpg、款号-L-2.jpg → 款号-L包边条.jpg；每个原图各取一张。';
+ if(!$('bindingFolder').dataset.selected)return;
+ const reply=await bindingApi().match_binding_files(bindingRequests,$('bindingRule').value);if(generation!==bindingRevision)return;if(reply.error)throw Error(reply.error);
+ bindingMatch=reply;showBindingResult();
+}
+$('binding').onclick=guarded(async()=>{
+ if(busy||bindingBusy)return;bindingRequests=bindingSources();if(!bindingRequests.length)throw Error('请先完成原图排料，再按已排文件匹配包边条');
+ bindingMatch=null;$('bindingSummary').textContent=`当前已排${bindingRequests.length}个原始图片文件`;
+ $('bindingResults').replaceChildren();$('bindingDialog').showModal();bindingControls();await refreshBinding();
+});
+$('bindingChoose').onclick=guarded(async()=>{
+ if(bindingBusy)return;bindingBusy=true;bindingControls();
+ try{const reply=await bindingApi().choose_binding_folder($('bindingRecursive').checked);if(reply.error)throw Error(reply.error);if(reply.cancelled)return;
+  $('bindingFolder').textContent=`${reply.folder} · 找到${reply.files.length}个“包边条”图片文件`;$('bindingFolder').dataset.selected='yes';await refreshBinding();
+ }finally{bindingBusy=false;bindingControls()}
+});
+$('bindingRule').onchange=guarded(refreshBinding);
+$('bindingRecursive').onchange=()=>{delete $('bindingFolder').dataset.selected;bindingMatch=null;$('bindingFolder').textContent='扫描范围已改变，请重新选择文件夹';$('bindingResults').replaceChildren();bindingControls()};
+$('bindingCopy').onclick=guarded(async()=>{
+ if(bindingBusy)return;bindingBusy=true;bindingControls();$('bindingSummary').textContent='请选择输出文件夹，随后复制对应原图…';
+ try{const reply=await bindingApi().copy_binding_files(bindingRequests,$('bindingRule').value);if(reply.error)throw Error(reply.error);
+  if(reply.cancelled){showBindingResult();toast('已取消复制');return}
+  $('bindingSummary').textContent=`已复制${reply.count}张包边条及对应清单：${reply.folder}`;toast(`已拉取${reply.count}张包边条，当前排料未改变`);
+ }finally{bindingBusy=false;bindingControls()}
+});
