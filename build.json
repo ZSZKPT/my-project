@@ -1,0 +1,9 @@
+{
+  "bytes": 33864653,
+  "platform": "Windows x64",
+  "selfTest": "passed",
+  "dpi": 110,
+  "sha256": "b0e86ba37d6c963f66bc512988d978215080cccdf3ba5d77026c55bf432f2324",
+  "workflowRun": "38872885021",
+  "sourceCommit": "cf776bf5ebfb3b7d965afe9f85cddfae30bf99cc"
+}
