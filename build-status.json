@@ -1,0 +1,11 @@
+{
+  "install": "success",
+  "package": "skipped",
+  "tests": "failure",
+  "sourceCommit": "ed4c8f141e1f6e52f6026ef7028b30e9b44ac5b2",
+  "release": "skipped",
+  "runId": "38872502783",
+  "selftest": "skipped",
+  "status": "failure",
+  "binary": "skipped"
+}
