@@ -1,11 +1,11 @@
 {
-  "platform": "Windows x64",
-  "dpi": 110,
-  "sourceCommit": "bbf8f15986ce7ef7ad03a82d2b9784293bbd389f",
-  "bytes": 36920787,
-  "sha256": "0a33554505e678ade1974b883397b9b6ad90062a1f7da3e735959bedffbdc7fa",
-  "windowTest": "passed",
   "embedded": true,
   "selfTest": "passed",
-  "workflowRun": "38878559488"
+  "workflowRun": "38879112737",
+  "sha256": "ea3535cb6396fd3b6625d55b08db12cead5b446e7a4202887797a0f3646b46ee",
+  "windowTest": "passed",
+  "bytes": 36926038,
+  "dpi": 110,
+  "sourceCommit": "76f8a6cf141f107bf1efa12ad6dac063d2224300",
+  "platform": "Windows x64"
 }
