@@ -5,11 +5,13 @@ import json
 import os
 import shutil
 import threading
+import time
 import uuid
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path, PureWindowsPath
 from desktop.core import prepare
+from desktop.file_access import TaskFileAccessError
 from desktop.profiles import products_to_rows, storage_dir
 from import_tools.miaoshou import export
 from import_tools.image_rules import validate_groups
@@ -20,9 +22,18 @@ def atomic_json(path,value):
     try:
         with temp.open('w',encoding='utf-8') as file:
             json.dump(value,file,ensure_ascii=False,indent=2);file.flush();os.fsync(file.fileno())
-        os.replace(temp,path)
+        for attempt in range(4):
+            try:
+                os.replace(temp,path)
+                break
+            except PermissionError as error:
+                if getattr(error,'winerror',None) not in (5,32,33) or attempt==3:raise
+                time.sleep((0.3,0.7,2.0)[attempt])
+    except PermissionError as error:
+        raise TaskFileAccessError('保存任务记录',path,error) from None
     finally:
-        if temp.exists():temp.unlink()
+        try:temp.unlink(missing_ok=True)
+        except OSError:pass
 
 
 def digest(path):
@@ -34,7 +45,10 @@ def digest(path):
 
 @contextmanager
 def task_lock(directory):
-    file=(Path(directory)/'.task.lock').open('a+b');locked=False
+    lock_path=Path(directory)/'.task.lock'
+    try:file=lock_path.open('a+b')
+    except PermissionError as error:raise TaskFileAccessError('打开任务锁文件',lock_path,error) from None
+    locked=False
     try:
         file.seek(0,2)
         if not file.tell():file.write(b'0');file.flush()
@@ -50,15 +64,19 @@ def task_lock(directory):
         except OSError:raise ValueError('此任务已在其他窗口运行，请先暂停并退出那个窗口') from None
         yield
     finally:
-        if locked:
-            file.seek(0)
-            if os.name=='nt':
-                import msvcrt
-                msvcrt.locking(file.fileno(),msvcrt.LK_UNLCK,1)
-            else:
-                import fcntl
-                fcntl.flock(file.fileno(),fcntl.LOCK_UN)
-        file.close()
+        try:
+            if locked:
+                file.seek(0)
+                if os.name=='nt':
+                    import msvcrt
+                    msvcrt.locking(file.fileno(),msvcrt.LK_UNLCK,1)
+                else:
+                    import fcntl
+                    fcntl.flock(file.fileno(),fcntl.LOCK_UN)
+        finally:
+            # Closing the handle releases the OS lock even if explicit unlock failed.
+            file.close()
+
 
 
 class Task:
@@ -189,19 +207,50 @@ class Task:
         finally:shutil.rmtree(stage,ignore_errors=True)
 
     def write_links(self):
-        target=self.root/'图片链接.csv';temp=target.with_suffix('.csv.tmp')
-        with temp.open('w',encoding='utf-8-sig',newline='') as file:
-            writer=csv.DictWriter(file,fieldnames=['sku','print_name','carousel_urls','material_url','preview_url']);writer.writeheader()
-            for g in self.state['groups']:
-                prepared=g['prepared']
-                if not prepared:continue
-                urls=[g['urls'].get(p,'') for p in prepared['carousel']]
-                writer.writerow({'sku':g['sku'],'print_name':g['print_name'],'carousel_urls':'|'.join(urls),'material_url':g['urls'].get(prepared['material'],''),'preview_url':urls[0] if urls else ''})
-        os.replace(temp,target)
+        target=self.local(self.state.get('links_file','图片链接.csv'))
+        temp=self.root/('.links-'+uuid.uuid4().hex+'.tmp')
+        try:
+            with temp.open('w',encoding='utf-8-sig',newline='') as file:
+                writer=csv.DictWriter(file,fieldnames=['sku','print_name','carousel_urls','material_url','preview_url']);writer.writeheader()
+                for g in self.state['groups']:
+                    prepared=g['prepared']
+                    if not prepared:continue
+                    urls=[g['urls'].get(p,'') for p in prepared['carousel']]
+                    writer.writerow({'sku':g['sku'],'print_name':g['print_name'],'carousel_urls':'|'.join(urls),'material_url':g['urls'].get(prepared['material'],''),'preview_url':urls[0] if urls else ''})
+            try:os.replace(temp,target)
+            except PermissionError:
+                fallback=self.root/('图片链接_续作_'+uuid.uuid4().hex[:8]+'.csv')
+                os.replace(temp,fallback)
+                self.state['links_file']=fallback.name;self.save()
+                self.emit('log',f'{target.name}无法覆盖，可能被占用或无替换权限；已保留原文件，后续链接写入：{fallback}')
+                target=fallback
+            return target
+        except PermissionError as error:
+            if isinstance(error,TaskFileAccessError):raise
+            raise TaskFileAccessError('保存图片链接表',target,error) from None
+        finally:
+            try:temp.unlink(missing_ok=True)
+            except OSError:pass
+
+    def missing_link_summary(self):
+        missing=[]
+        for group in self.state['groups']:
+            prepared=group.get('prepared')
+            images=sum(not group['urls'].get(p) for p in prepared['carousel']) if prepared else len(group['sources'])
+            material=not prepared or not group['urls'].get(prepared['material'])
+            if images or material:missing.append((group['sku'],images,bool(material)))
+        return missing
+
+    def enable_auto_upload(self):
+        with task_lock(self.root):
+            self.state=json.loads(self.path.read_text(encoding='utf-8'))
+            if self.state['status']=='complete':return
+            self.state['settings']['mode']='ImgBB 自动上传'
+            self.save()
 
     def needs_upload(self):
         if self.state['status']=='complete' or self.state['settings']['mode']!='ImgBB 自动上传':return False
-        return any(not group['prepared'] or any(path not in group['urls'] for path in group['prepared']['carousel']+[group['prepared']['material']]) for group in self.state['groups'])
+        return any(not group['prepared'] or any(not group['urls'].get(path) for path in group['prepared']['carousel']+[group['prepared']['material']]) for group in self.state['groups'])
 
     def recover_export(self):
         pending=self.state.get('pending_export')
@@ -245,7 +294,7 @@ class Task:
                     if self.state['settings']['mode']=='ImgBB 自动上传':
                         for relative in files:
                             self.boundary()
-                            if relative in g['urls']:continue
+                            if g['urls'].get(relative):continue
                             url=uploader(self.local(relative))
                             from import_tools.dianxiaomi import image_url
                             g['urls'][relative]=image_url(url)
@@ -261,7 +310,7 @@ class Task:
                                      'material_url':g['urls'].get(prepared['material'],'')})
                 self.write_links();self.boundary()
                 if any(not p['material_url'] or not all(p['carousel_urls'].split('|')) for p in products):
-                    self.state['status']='waiting_links';self.save();self.emit('status','图片已处理 · 待补链接');self.emit('log','在图片链接CSV填好链接后，可加载此任务继续生成。');return None
+                    self.state['status']='waiting_links';self.save();self.emit('status','图片已处理 · 待补链接');self.emit('log','缺失链接：'+ '；'.join(f'{sku} 商品图{images}张、素材图{int(material)}张' for sku,images,material in self.missing_link_summary()[:20]));self.emit('log','请补齐 '+str(self.local(self.state.get('links_file','图片链接.csv')))+'，或填写本地 API Key 后点击“自动补传缺失链接”；已有图片和链接会复用。');return None
                 rows,titles=products_to_rows(self.state['config'],products,self.state['config']['price']);self.emit('progress',95)
                 temp=self.root/('.export-'+uuid.uuid4().hex+'.xlsx')
                 result=export(self.root/'导入模板.xlsx',rows,temp,titles,self.state['config']['origin'])

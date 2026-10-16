@@ -15,6 +15,7 @@ from desktop.template_editor import open_editor
 from desktop.print_names import read_names, title_for
 from desktop.thumbnails import add_thumbnail
 from desktop.tasks import Task, remember, last_task
+from desktop.file_access import explain_file_error
 from import_tools.image_rules import validate_groups
 
 
@@ -196,6 +197,7 @@ class App:
 
     def work(self,values,config,groups,task_path=None):
         self.stop_retry.clear()
+        task=None
         try:
             emit=lambda kind,value:self.events.put((kind,value))
             task=Task(task_path,emit) if task_path else Task.create(values,config,groups,emit)
@@ -211,7 +213,8 @@ class App:
                             raise ValueError('已停止自动重试，可手动继续上次任务') from None
         except Exception as error:
             self.events.put(('status','被动中断 · 可继续上次任务'))
-            self.events.put(('log',f'任务中断：{error}。已保存的图片和链接会在继续时复用。'))
+            details=explain_file_error(error,task_path or getattr(task,'path',None))
+            self.events.put(('log',f'任务中断：{details}。已保存的图片和链接会在继续时复用。'))
         finally:self.events.put(('done',None))
 
     def new_task(self):
@@ -237,7 +240,7 @@ class App:
             self.status_text.set('原图路径已更新 · 可继续')
         except Exception as error:messagebox.showerror('重新定位失败',str(error))
 
-    def resume_saved(self,select=False):
+    def resume_saved(self,select=False,auto_upload=False):
         if self.busy:return
         try:
             path=getattr(self,'last_task',None)
@@ -245,7 +248,11 @@ class App:
                 selected=filedialog.askopenfilename(title='选择之前输出目录中的任务进度.json',initialdir=self.current_output or None,filetypes=[('任务记录','*.json')])
                 if not selected:return
                 path=Path(selected)
-            task=Task(path);settings=task.state['settings'];config=task.state['config']
+            task=Task(path)
+            if auto_upload and task.state['status']!='complete':
+                if task.missing_link_summary() and not self.variables['key'].get().strip():raise ValueError('请先在软件中填写 ImgBB API Key；不要在聊天中发送密钥')
+                task.enable_auto_upload()
+            settings=task.state['settings'];config=task.state['config']
             if task.needs_upload() and not self.variables['key'].get().strip():raise ValueError('请先填写本次使用的ImgBB API Key，再点击继续；密钥不会保存在任务中')
             self.last_task=Path(path)
             # Use the original immutable task snapshot rather than newly edited controls.
@@ -256,15 +263,15 @@ class App:
             self.variables['main_suffix'].set(settings.get('main_suffix',config.get('main_suffix','前')))
             self.variables['size'].set(str(settings['size']));self.variables['mode'].set(settings['mode'])
             self.variables['output'].set(str(task.root.parent));self.variables['template'].set(str(task.root/'导入模板.xlsx'))
-            links=self.variables['links'].get().strip()
-            if settings['mode']!='ImgBB 自动上传' and not links:links=str(task.root/'图片链接.csv')
+            links='' if auto_upload else self.variables['links'].get().strip()
+            if settings['mode']!='ImgBB 自动上传' and not links:links=str(task.local(task.state.get('links_file','图片链接.csv')))
             values={'key':self.variables['key'].get().strip(),'links':links}
             self.busy=True;self.run_button.configure(state='disabled');self.scan_button.configure(state='disabled');self.profile_select.configure(state='disabled')
             self.resume_button.configure(state='disabled');self.load_task_button.configure(state='disabled')
             self.status_text.set('正在从保存位置继续')
             self.write('继续任务：'+str(path)+'；沿用该任务模板、价格和输出目录。')
             threading.Thread(target=self.work,args=(values,None,None,path),daemon=True).start()
-        except Exception as error:messagebox.showerror('无法继续任务',str(error))
+        except Exception as error:messagebox.showerror('无法继续任务',explain_file_error(error,locals().get('path')))
 
     def open_output(self):
         if not self.current_output:return

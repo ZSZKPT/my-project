@@ -24,6 +24,7 @@ jobs:
       - run: python -m unittest discover -s tests -p test_resume.py -v
       - run: python -m unittest discover -s tests -p test_image_rules.py -v
       - run: python -m unittest discover -s tests -p test_task_paths.py -v
+      - run: python -m unittest discover -s tests -p test_file_access.py -v
       - run: python -m PyInstaller --noconfirm --clean --onefile --windowed --name "飞凡上架" --paths . --add-data "desktop/assets;assets" desktop/main.py
       - name: Smoke test Windows EXE
         run: |
