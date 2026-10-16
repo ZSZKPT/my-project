@@ -57,6 +57,38 @@ class NativeSaveTests(unittest.TestCase):
         reply=self.bridge.export_file('/api/export/jpg',{'project':raw},'print.jpg')
         self.assertIn('error',reply);self.assertEqual(self.fake.dialog_calls,0)
 
+    def test_background_save_chooses_first_and_reports_completion(self):
+        import time
+        raw=paired_project();raw['placements']=solve(raw,threading.Event())['placements']
+        selected=self.bridge.choose_export('print.jpg')
+        self.assertEqual(self.fake.dialog_calls,1)
+        self.assertFalse(self.fake.path.exists())
+        key=selected['job']
+        self.assertTrue(self.bridge.start_export(key,'/api/export/jpg',{'project':raw})['started'])
+        deadline=time.monotonic()+15
+        while self.bridge.export_status(key)['state']=='running' and time.monotonic()<deadline:time.sleep(.01)
+        self.assertEqual(self.bridge.export_status(key)['state'],'done')
+        with Image.open(self.fake.path) as image:self.assertEqual(image.info['dpi'],(110,110))
+        self.assertFalse(list(self.root.glob('.buxu-*')))
+
+    def test_background_cancel_preserves_existing_file(self):
+        import time
+        entered=threading.Event();release=threading.Event()
+        self.fake.path.write_bytes(b'original')
+        def slow(raw,progress=None,output=None):
+            output.write(b'partial');entered.set();release.wait(5);progress(98,'saving')
+        with patch('exporting.production_jpg',slow):
+            key=self.bridge.choose_export('print.jpg')['job']
+            self.bridge.start_export(key,'/api/export/jpg',{'project':{}})
+            self.assertTrue(entered.wait(3))
+            self.assertEqual(self.bridge.export_status(key)['state'],'running')
+            self.bridge.cancel_export(key);release.set()
+            deadline=time.monotonic()+5
+            while self.bridge.export_status(key)['state']=='running' and time.monotonic()<deadline:time.sleep(.01)
+        self.assertEqual(self.bridge.export_status(key)['state'],'cancelled')
+        self.assertEqual(self.fake.path.read_bytes(),b'original')
+        self.assertFalse(list(self.root.glob('.buxu-*')))
+
     def test_project_save_uses_selected_path_and_atomic_write(self):
         self.fake.path=self.root/'原始项目.json'
         payload=json.dumps({'name':'裁片项目','dpi':110},ensure_ascii=False).encode()

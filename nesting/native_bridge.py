@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import tempfile
 import threading
+import uuid
 from urllib.parse import urlparse
 
 
@@ -13,6 +14,8 @@ class NativeBridge:
         self._origin=origin
         self._window=None
         self._save_lock=threading.Lock()
+        self._exports={}
+        self._export_mutex=threading.Lock()
 
     def _check_origin(self):
         current=urlparse(self._window.get_current_url() if self._window else '')
@@ -22,7 +25,7 @@ class NativeBridge:
 
     def info(self):
         self._check_origin()
-        return {'embedded':True,'version':'3.0','nativeSave':True}
+        return {'embedded':True,'version':'4.0','nativeSave':True}
 
     def _choose(self,name):
         import webview
@@ -63,6 +66,65 @@ class NativeBridge:
         except Exception as exc:
             logging.exception('Native save failed');return {'error':str(exc)}
         finally:self._save_lock.release()
+
+    def choose_export(self,name):
+        """Choose destination before transferring artwork or doing geometry work."""
+        self._check_origin()
+        with self._export_mutex:
+            if any(j['state'] in ('chosen','running') for j in self._exports.values()):
+                return {'error':'已有导出任务正在运行'}
+            target=self._choose(name)
+            if target is None:return {'cancelled':True}
+            key=uuid.uuid4().hex
+            self._exports={key:{'target':target,'state':'chosen','percent':0,'message':'等待生成','cancel':threading.Event()}}
+        return {'job':key}
+
+    def start_export(self,key,path,body):
+        self._check_origin()
+        job=self._exports.get(key)
+        if not job or job['state']!='chosen':return {'error':'导出任务已失效'}
+        if path!='/api/export/jpg':return {'error':'后台生成暂仅用于生产JPG'}
+        job['state']='running'
+        def run():
+            temporary=None
+            try:
+                from exporting import production_jpg
+                def progress(percent,message):
+                    if job['cancel'].is_set():raise InterruptedError('已取消生成')
+                    if percent is not None:job['percent']=percent;job['message']=message
+                progress(1,'正在独立复核排料')
+                target=job['target']
+                with tempfile.NamedTemporaryFile(dir=target.parent,prefix='.buxu-',suffix='.tmp',delete=False) as out:
+                    temporary=Path(out.name)
+                    production_jpg(body['project'],progress=progress,output=out)
+                    out.flush();os.fsync(out.fileno())
+                # Cancel and final replace share a lock: never overwrite after a successful cancel.
+                with self._export_mutex:
+                    progress(99,'完成保存')
+                    os.replace(temporary,target);temporary=None
+                    job.update(state='done',percent=100,message='已保存：'+target.name)
+            except InterruptedError:job.update(state='cancelled',message='已取消，原文件未更改')
+            except Exception as exc:
+                logging.exception('Background export failed');job.update(state='error',message=str(exc))
+            finally:
+                if temporary is not None:temporary.unlink(missing_ok=True)
+        threading.Thread(target=run,daemon=True).start()
+        return {'started':True}
+
+    def export_status(self,key):
+        self._check_origin()
+        job=self._exports.get(key)
+        if not job:return {'state':'error','message':'导出任务不存在'}
+        return {k:job[k] for k in ('state','percent','message')}
+
+    def cancel_export(self,key):
+        self._check_origin()
+        with self._export_mutex:
+            job=self._exports.get(key)
+            if job and job['state'] in ('chosen','running'):
+                job['cancel'].set()
+                if job['state']=='chosen':job.update(state='cancelled',message='已取消')
+        return {'cancelled':True}
 
     def export_file(self,path,body,name):
         """Render directly in Python, avoiding large JPEG copies across JS IPC."""

@@ -21,7 +21,7 @@ function updateInspector(){const p=picked();$('inspector').hidden=!p;if(!p)retur
 function renderList(){const list=$('pieceList');list.replaceChildren();$('pieceCount').textContent=project.pieces.length;const ready=project.pieces.filter(p=>p.confirmed&&p.dimensionConfirmed).length;$('readyCount').textContent=`${new Set(project.pieces.map(p=>p.sourceGroup||p.id)).size} 文件 · ${project.pieces.length} 片自动导入`;
  for(const piece of project.pieces){const row=document.createElement('div');row.className='piece-row'+(picked()?.pieceId===piece.id?' active':'');const img=document.createElement('img');img.className='thumb';img.src=piece.source;img.alt='';const info=document.createElement('div');info.className='piece-info';const title=document.createElement('strong');title.textContent=piece.name;const size=document.createElement('small');size.textContent=piece.dimensionConfirmed?`${piece.width.toFixed(1)} × ${piece.height.toFixed(1)} mm`:'待填写实际尺寸';const tag=document.createElement('span');tag.className='tiny-tag'+(piece.confirmed&&piece.dimensionConfirmed?'':' pending');tag.textContent=piece.confirmed&&piece.dimensionConfirmed?piece.verticalOnly?'成组上下错位 · 标签保留':'自动导入 · 1片':'待填写尺寸 · 1片';info.append(title,size,tag);row.append(img,info);row.addEventListener('click',()=>{if(busy)return;openPiece(piece.id)});list.append(row)}
 }
-function renderCanvas(){const svg=$('layout');svg.replaceChildren();$('emptyState').hidden=project.placements.length>0;if(!project.placements.length){svg.style.width='';return}const s=project.settings;const actualLength=result?.stats?.length||Math.max(...project.placements.map(p=>p.y+(findPiece(p.pieceId)?.height||0)+s.tail),10);const length=Math.min(actualLength,2000);const pad=45,W=s.width+2*pad,H=length+2*pad;
+function renderCanvas(){const svg=$('layout');svg.replaceChildren();$('emptyState').hidden=project.placements.length>0;if(!project.placements.length){svg.style.width='';return}const s=project.settings;const actualLength=result?.stats?.length||Math.max(...project.placements.map(p=>p.y+(findPiece(p.pieceId)?.height||0)+s.tail),10);const length=actualLength;const pad=45,W=s.width+2*pad,H=length+2*pad;
  svg.setAttribute('viewBox',`${-pad} ${-pad} ${W} ${H}`);svg.style.width=`${zoom*100}%`;svg.style.height='auto';svg.setAttribute('width',W);svg.setAttribute('height',H);
  const defs=el('defs');const grid=el('pattern',{id:'grid',width:100,height:100,patternUnits:'userSpaceOnUse'});grid.append(el('path',{d:'M 100 0 L 0 0 0 100',fill:'none',stroke:'#e4e8df','stroke-width':1}));defs.append(grid);svg.append(defs);
  svg.append(el('rect',{x:0,y:0,width:s.width,height:length,fill:'#fffdf8'}),el('rect',{x:0,y:0,width:s.width,height:length,fill:'url(#grid)'}));
@@ -45,7 +45,7 @@ function renderCanvas(){const svg=$('layout');svg.replaceChildren();$('emptyStat
 function renderStats(){const stats=result?.stats,total=project.pieces.length;$('lengthMetric').innerHTML=stats?`${(stats.length/1000).toFixed(3)}<small> m</small>`:'—<small> m</small>';$('utilMetric').innerHTML=stats?`${(stats.effectiveUtilization*100).toFixed(1)}<small> %</small>`:'—<small> %</small>';$('countMetric').innerHTML=`${project.placements.length} <small>/ ${total} 片</small>`;
  const base=result?.comparison?.[0]?.length;const saving=stats&&base?100*(base-stats.length)/base:null;$('savingMetric').innerHTML=saving===null?'—<small> %</small>':`${saving.toFixed(1)}<small> %</small>`;
  $('verifyStatus').textContent=result?(result.valid?'通过 ✓':'存在问题'):'未复核';$('statusBadge').textContent=busy?'正在寻找更优方案':(result?.valid?'复核通过':project.pieces.length?'待排料 / 核对':'等待导入');$('statusBadge').classList.toggle('running',busy);
- $('resultMessage').textContent=stats?`${stats.length>2000?'长排料仅预览前2米，导出直接下载完整生产JPG · ':''}有效门幅 ${stats.effectiveWidth.toFixed(1)} mm · 完整门幅利用率 ${(stats.fullUtilization*100).toFixed(1)}% · 净面积 ${(stats.netArea/1e6).toFixed(3)} m² · 出血/保守余量占用 ${((stats.occupiedArea-stats.netArea)/1e6).toFixed(3)} m² · 面积下界 ${(stats.areaLowerBound/1000).toFixed(3)} m（仅供参考）${result.seconds!==undefined?` · 已计算 ${result.seconds.toFixed(2)} s / ${result.iterations} 轮 · ${result.phase||'搜索'} · 已保留${result.acceptedMoves||0}次改善${result.timedOut?'，达到时间上限':''}${result.stopped?'，已停止':''}`:''}`:'默认110 DPI、轮廓净间距3 mm；左右双片保持横向关系、仅上下错位，原图标签随片打印。';
+ $('resultMessage').textContent=stats?`全图预览，可向下滚动查看所有裁片 · 有效门幅 ${stats.effectiveWidth.toFixed(1)} mm · 完整门幅利用率 ${(stats.fullUtilization*100).toFixed(1)}% · 净面积 ${(stats.netArea/1e6).toFixed(3)} m² · 出血/保守余量占用 ${((stats.occupiedArea-stats.netArea)/1e6).toFixed(3)} m² · 面积下界 ${(stats.areaLowerBound/1000).toFixed(3)} m（仅供参考）${result.seconds!==undefined?` · 已计算 ${result.seconds.toFixed(2)} s / ${result.iterations} 轮 · ${result.phase||'搜索'} · 已保留${result.acceptedMoves||0}次改善${result.timedOut?'，达到时间上限':''}${result.stopped?'，已停止':''}`:''}`:'默认110 DPI、轮廓净间距3 mm；左右双片保持横向关系、仅上下错位，原图标签随片打印。';
  $('errorList').replaceChildren();for(const error of (result?.errors||[]).slice(0,8)){const line=document.createElement('div');line.className='error-line';line.textContent=`${error.message}：${error.keys.map(k=>findPiece(k.split('::')[0])?.name||k).slice(0,5).join('、')}`;$('errorList').append(line)}
  $('comparison').replaceChildren();for(const item of result?.comparison||[]){const card=document.createElement('div');card.textContent=item.label;const number=document.createElement('strong');number.textContent=`${(item.length/1000).toFixed(3)} m`;const text=document.createElement('span');text.textContent=`利用率 ${(item.effectiveUtilization*100).toFixed(1)}% · ${item.seconds.toFixed(2)} s`;card.append(number,text);$('comparison').append(card)}
  $('solve').disabled=busy||!total;$('stop').hidden=!busy;$('stop').disabled=!jobId;['importBtn','importLink','demo','openProject','saveProject','export','validateBtn','emptyDemo'].forEach(k=>$(k).disabled=busy);settingKeys.forEach(k=>$(k).disabled=busy);$('mode').disabled=busy;$('undo').disabled=busy||!past.length;$('redo').disabled=busy||!future.length;
@@ -117,7 +117,36 @@ $('openProject').onclick=()=>$('projectFile').click();$('projectFile').onchange=
  project=candidate;result=prepared;past=[];future=[];selected=null;loadSettings();render();toast('项目已打开；未排料项目可继续核对素材')});
 $('export').onclick=()=>{$('exportDialog').showModal()};
 async function fetchExport(path,body,save=true,name){const native=window.pywebview?.api;if(save&&native?.export_file)return nativeResult(await native.export_file(path,body,name));const response=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});if(!response.ok){const data=await response.json();throw Error(data.error||'导出失败')}const blob=await response.blob();if(save)await download(blob,name);return blob}
-async function checkedExport(path,name){syncSettings();const v=await check();if(!v.valid)throw Error('复核未通过，禁止生产导出');toast('正在生成生产文件，完成后自动下载；长排料可能需要较长时间');const buttons=[...$('exportDialog').querySelectorAll('button')];buttons.forEach(b=>b.disabled=true);try{return await fetchExport(path,{project,segmentMm:Number($('segmentMm').value)},true,name)}finally{buttons.forEach(b=>b.disabled=false)}}
+let exporting=false,exportJob=null;
+async function checkedExport(path,name){
+ if(exporting)return;exporting=true;
+ const buttons=[...$('exportDialog').querySelectorAll('.export-options button')];
+ const status=$('exportStatus'),bar=$('exportProgress'),cancel=$('cancelExport');
+ buttons.forEach(b=>b.disabled=true);status.hidden=false;bar.value=0;
+ $('exportMessage').textContent='请选择保存位置，随后将在后台生成';
+ try{
+  syncSettings();const native=window.pywebview?.api;
+  if(path==='/api/export/jpg'&&native?.choose_export){
+   const choice=await native.choose_export(name);if(choice.error)throw Error(choice.error);if(choice.cancelled)return;
+   exportJob=choice.job;cancel.hidden=false;
+   $('exportMessage').textContent='正在提交后台任务…';
+   await new Promise(resolve=>requestAnimationFrame(()=>setTimeout(resolve,0)));
+   const started=await native.start_export(exportJob,path,{project});if(started.error)throw Error(started.error);
+   while(true){
+    const state=await native.export_status(exportJob);bar.value=state.percent||0;$('exportMessage').textContent=state.message;
+    if(state.state==='error')throw Error(state.message);
+    if(state.state==='done'||state.state==='cancelled'){toast(state.message);break}
+    await new Promise(resolve=>setTimeout(resolve,400));
+   }
+  }else{
+   $('exportMessage').textContent='正在后台复核并生成文件…';
+   await new Promise(resolve=>setTimeout(resolve,0));
+   await fetchExport(path,{project,segmentMm:Number($('segmentMm').value)},true,name);bar.value=100;$('exportMessage').textContent='文件已生成';
+  }
+ }catch(error){$('exportMessage').textContent=error.message;throw error}
+ finally{exporting=false;exportJob=null;cancel.hidden=true;buttons.forEach(b=>b.disabled=false)}
+}
+$('cancelExport').onclick=guarded(async()=>{if(exportJob){await window.pywebview.api.cancel_export(exportJob);$('exportMessage').textContent='正在取消；当前编码步骤完成后停止，不覆盖原文件'}});
 $('exportJpg').onclick=guarded(()=>checkedExport('/api/export/jpg','布序生产排料-110dpi.jpg'));$('exportJpgZip').onclick=guarded(()=>checkedExport('/api/export/jpg-zip','布序分段生产JPG-110dpi.zip'));
 $('exportSvg').onclick=guarded(()=>checkedExport('/api/export/svg','布序排料-1比1.svg'));$('exportZip').onclick=guarded(()=>checkedExport('/api/export/zip','布序分段生产包.zip'));$('exportCsv').onclick=guarded(()=>checkedExport('/api/export/csv','裁片坐标.csv'));
 $('exportPng').onclick=guarded(async()=>{const blob=await fetchExport('/api/export/svg',{project},false),url=URL.createObjectURL(blob);try{const image=new Image();await new Promise((resolve,reject)=>{image.onload=resolve;image.onerror=()=>reject(Error('预览渲染失败'));image.src=url});const s=result?.stats|| (await api('/api/validate',project)).stats;let w=1600,h=Math.ceil(w*s.length/project.settings.width);if(h>8000){w=Math.max(1,Math.floor(w*8000/h));h=8000}const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const context=canvas.getContext('2d');context.fillStyle='#fff';context.fillRect(0,0,w,h);context.drawImage(image,0,0,w,h);context.fillStyle='#b54732';context.font=`${Math.max(9,w/70)}px sans-serif`;context.fillText('低分辨率预览 · 非生产比例',10,Math.max(20,w/50));const output=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));if(!output)throw Error('PNG生成失败');await download(output,'排料预览-非生产.png')}finally{URL.revokeObjectURL(url)}});

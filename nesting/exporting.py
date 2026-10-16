@@ -8,18 +8,21 @@ from datetime import datetime,timezone
 from assets import decode_data, safe_svg
 from geometry import prepare,validate,rings,number
 
-def raster_canvas(raw,start=0,length=None,dpi=110):
+def raster_canvas(raw,start=0,length=None,dpi=110,context=None,progress=None):
     from PIL import Image,ImageDraw
     from geometry import placed
-    result=validate(raw)
-    if not result['valid']:raise ValueError('导出被阻止：'+result['errors'][0]['message'])
-    s,catalog,instances=prepare(raw)
+    if context is None:
+        result=validate(raw)
+        if not result['valid']:raise ValueError('导出被阻止：'+result['errors'][0]['message'])
+        context=(result,*prepare(raw))
+    result,s,catalog,instances=context
     length=result['stats']['length'] if length is None else length
     scale=dpi/25.4;width=max(1,round(s['width']*scale));height=max(1,round(length*scale))
     if width>65000 or height>65000 or width*height>64_000_000:
         raise ValueError('内部渲染分块超限')
     canvas=Image.new('RGB',(width,height),'white')
     for p in result['placements']:
+        if progress:progress(None,'正在绘制裁片')
         item=instances[p['key']];g=placed(item,p);a,b,c,d=g.bounds
         if d<=start or b>=start+length:continue
         if item['source'].startswith('data:image/svg+xml;'):
@@ -39,21 +42,23 @@ def raster_canvas(raw,start=0,length=None,dpi=110):
         canvas.paste(patch,(x0,y0),mask)
     return canvas
 
-def production_jpg(raw,start=0,length=None,dpi=110):
+def production_jpg(raw,start=0,length=None,dpi=110,progress=None,output=None):
     from PIL import Image
     import mmap
     import shutil
     import tempfile
     result=validate(raw)
     if not result['valid']:raise ValueError('导出被阻止：'+result['errors'][0]['message'])
-    s,_,_=prepare(raw);scale=dpi/25.4
+    context=(result,*prepare(raw));s=context[1];scale=dpi/25.4
+    if progress:progress(5,'复核通过，开始生成110 DPI图片')
     length=result['stats']['length'] if length is None else length
     width=max(1,round(s['width']*scale));height=max(1,round(length*scale))
     if width>65000 or height>65000:
         raise ValueError('超过JPG格式的单边尺寸上限，请使用分段JPG；不会缩小生产尺寸')
-    out=io.BytesIO()
+    out=output if output is not None else io.BytesIO()
     if width*height<=24_000_000:
-        image=raster_canvas(raw,start,length,dpi)
+        image=raster_canvas(raw,start,length,dpi,context,progress)
+        if progress:progress(85,'正在编码JPG，请稍候')
         image.save(out,'JPEG',quality=100,subsampling=0,dpi=(dpi,dpi))
         image.close()
     else:
@@ -67,14 +72,17 @@ def production_jpg(raw,start=0,length=None,dpi=110):
             base_row=round(start*scale)
             for offset in range(0,height,rows):
                 count=min(rows,height-offset)
-                strip=raster_canvas(raw,(base_row+offset)/scale,count/scale,dpi)
+                if progress:progress(5+75*offset/height,'正在分块绘制完整排料')
+                strip=raster_canvas(raw,(base_row+offset)/scale,count/scale,dpi,context,progress)
                 rgbx=strip.convert('RGBX');pixels.write(rgbx.tobytes());rgbx.close();strip.close()
             pixels.flush()
             with mmap.mmap(pixels.fileno(),0,access=mmap.ACCESS_READ) as mapped:
                 image=Image.frombuffer('RGBX',(width,height),mapped,'raw','RGBX',0,1)
+                if progress:progress(85,'正在编码完整JPG，请稍候')
                 image.save(out,'JPEG',quality=100,subsampling=0,dpi=(dpi,dpi))
                 image.close();del image
-    return out.getvalue()
+    if progress:progress(98,'正在保存文件')
+    return out.getvalue() if output is None else None
 
 def jpg_zip(raw,segment=2000,dpi=110):
     result=validate(raw)
