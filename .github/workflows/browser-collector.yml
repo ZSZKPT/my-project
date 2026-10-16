@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['browser-collector/**', 'tests/browser-collector.test.mjs', '.github/workflows/browser-collector.yml']
+    paths: ['browser-collector/**', 'tests/browser-collector.test.mjs', 'tests/browser-zip.test.mjs', '.github/workflows/browser-collector.yml']
 permissions:
   contents: read
 jobs:
@@ -18,7 +18,9 @@ jobs:
           node --check browser-collector/background.js
           node --check browser-collector/extract.js
           node --check browser-collector/popup.js
-          node --test tests/browser-collector.test.mjs
+          node --check browser-collector/zip.js
+          node --check browser-collector/zip-offscreen.js
+          node --test tests/browser-collector.test.mjs tests/browser-zip.test.mjs
           python3 -m json.tool browser-collector/manifest.json > /dev/null
       - uses: actions/upload-artifact@v4
         with:

@@ -1,6 +1,6 @@
 /* Same-origin public feed; local review decisions always take priority. */
 'use strict';
-const feedStatusNames={ok:'采集成功',robots_disallowed:'站点规则不允许',robots_unavailable:'采集规则暂不可查',auth_required:'需要登录',verification_required:'需要验证',http_error:'访问被拒绝',no_public_products:'未识别公开商品',redirected:'页面跳转',failed:'采集失败',invalid_target:'目标无效'};
+const feedStatusNames={stopped:'已停止',wrong_page:'请打开正确的首页',ok:'采集成功',robots_disallowed:'站点规则不允许',robots_unavailable:'采集规则暂不可查',auth_required:'需要登录',verification_required:'需要验证',http_error:'访问被拒绝',no_public_products:'未识别公开商品',redirected:'页面跳转',failed:'采集失败',invalid_target:'目标无效'};
 function renderFeedTargets(data){if(!data.targets?.length)return;$('#targetList').innerHTML=data.targets.map(t=>`<article class="target"><span class="pill">${escape(feedStatusNames[t.status]||'等待采集')}</span><h3 style="margin-top:16px">${escape(t.platform)}</h3><p>${escape(t.name||'')}</p><p>站点请求：${escape(t.site||'未知')}<br>最近成功：${escape(t.lastSuccess?new Date(t.lastSuccess).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'}):'尚无')}<br>本次识别：${Number(t.count)||0} 条</p><p>${escape(t.message||'')}</p><a href="${escape(safeURL(t.url))}" target="_blank" rel="noopener noreferrer">打开目标页面 ↗</a></article>`).join('')}
 function syncFeed(){toast('请点击 Chrome 扩展中的“同步在线表格”；本页不会启动云端匿名采集')}
 $('#refreshFeed').onclick=syncFeed;
