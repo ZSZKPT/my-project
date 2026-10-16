@@ -12,7 +12,10 @@ const assert=require('node:assert/strict');
  try{
   await page.goto(process.env.NESTING_URL);await page.locator('#emptyDemo').click();await page.locator('#solve').click();
   await page.waitForFunction(()=>document.querySelector('#statusBadge').textContent==='复核通过');
-  await page.evaluate(()=>{project.placements[0].y=3000;result.stats.length=4000;renderCanvas()});
+  await page.locator('#layout [data-key]').first().locator('path').first().click({force:true});
+  await page.locator('#posY').fill('4000');await page.locator('#posY').dispatchEvent('change');
+  await page.waitForResponse(r=>r.url().endsWith('/api/validate'));
+  await page.waitForFunction(()=>Number(document.querySelector('#layout').getAttribute('viewBox').split(' ')[3])>4000);
   assert.equal(await page.locator('#layout [data-key]').count(),4);
   assert.ok(Number((await page.locator('#layout').getAttribute('viewBox')).split(' ')[3])>4000);
   await page.locator('#export').click();await page.locator('#exportJpg').click();await page.waitForFunction(()=>calls.includes('start'));
