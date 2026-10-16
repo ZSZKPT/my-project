@@ -131,6 +131,8 @@ def validate(raw, partial=False):
         item=instances[p['key']]
         if item.get('verticalOnly'):grouped.setdefault(item['sourceGroup'],[]).append(p)
     for parts in grouped.values():
+        if any(instances[p['key']].get('fixedPair') for p in parts) and any(abs(p['y']-parts[0]['y'])>EPS for p in parts):
+            errors.append({'keys':[p['key'] for p in parts],'message':'同图左右片必须保持原始相对位置，禁止单片上下移动；请重新排料'})
         if any(abs(p['x']-parts[0]['x'])>EPS or p['angle']!=parts[0]['angle'] for p in parts):
             errors.append({'keys':[p['key'] for p in parts],'message':'同组左右片只能上下错位，横向基准及整体方向必须一致'})
     for i,g in enumerate(geoms):

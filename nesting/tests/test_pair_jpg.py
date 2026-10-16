@@ -48,7 +48,8 @@ class PairJpgTests(unittest.TestCase):
     def test_group_vertical_only_and_complete_membership(self):
         raw=paired_project();report=solve(raw,threading.Event());self.assertTrue(report['valid']);raw['placements']=report['placements']
         a,b=raw['placements'];self.assertAlmostEqual(a['x'],b['x']);self.assertEqual(a['angle'],b['angle'])
-        b['y']+=500;self.assertTrue(validate(raw)['valid'])
+        self.assertAlmostEqual(a['y'],b['y'])
+        b['y']+=500;self.assertFalse(validate(raw)['valid']);b['y']-=500
         b['x']+=1;self.assertFalse(validate(raw)['valid']);b['x']-=1
         b['angle']=180-a['angle'];self.assertFalse(validate(raw)['valid'])
         raw['pieces']=raw['pieces'][:1]

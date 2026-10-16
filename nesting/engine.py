@@ -39,15 +39,27 @@ def clear_at(g,tree,geoms,gap):
 def layout_score(layout,instances):
     shapes=[placed(instances[p['key']],p) for p in layout]
     return (round(max((g.bounds[3] for g in shapes),default=0),6),
-            round(sum(g.area*g.centroid.y for g in shapes),4))
+            round(sum(g.area*g.centroid.y for g in shapes),4),
+            round(sum(g.area*g.centroid.x for g in shapes),4))
 
-def compact_complete(layout,instances,s,deadline,stop,on_improvement):
+def compact_complete(layout,instances,s,deadline,stop,on_improvement,axis="y"):
     """Move individual panels only upward; every intermediate layout is complete.
 
     X and angle remain unchanged, including paired panels and locked siblings.
     Test free intervals from top to bottom rather than stopping at the first
     obstacle below the current position: this can fill earlier enclosed gaps.
     """
+    if axis=='x':
+        # Transpose the entire collision scene, including the source frame.
+        swapped={}
+        for key,item in instances.items():
+            swapped[key]={**item,'_noCompact':bool(item.get('verticalOnly')),'width':item['height'],'height':item['width'],
+                'geom':affinity.affine_transform(item['geom'],[0,1,1,0,0,0]),
+                'occupied':affinity.affine_transform(item['occupied'],[0,1,1,0,0,0])}
+        def transpose(items):return [{**p,'x':p['y'],'y':p['x']} for p in items]
+        def report(items,phase,moves):on_improvement(transpose(items),'整组横向压紧',moves)
+        result,moves=compact_complete(transpose(layout),swapped,{**s,'head':s['left']},deadline,stop,report)
+        return transpose(result),moves
     current=[p.copy() for p in layout];moves=0
     for _ in range(2):
         moved_in_pass=False
@@ -55,7 +67,7 @@ def compact_complete(layout,instances,s,deadline,stop,on_improvement):
         for index in order:
             if stop.is_set() or time.monotonic()>=deadline:return current,moves
             p=current[index]
-            if p.get('locked'):continue
+            if p.get('locked') or instances[p['key']].get('_noCompact'):continue
             local=oriented(instances[p['key']],p['angle']);a,b,c,d=local.bounds
             others=[placed(instances[q['key']],q) for j,q in enumerate(current) if j!=index]
             tree=STRtree(others)
@@ -177,7 +189,7 @@ def pack(order,instances,s,locks,deadline,stop,orientation_cache=None):
         geoms.append(best[7])
     return result
 
-def solve(raw,stop,progress=lambda value:None):
+def _solve_panels(raw,stop,progress=lambda value:None):
     started=time.monotonic();s,catalog,instances=prepare(raw)
     locks=[p for p in raw.get('placements',[]) if p.get('locked')]
     check=validate({**raw,'placements':locks},partial=True)
@@ -214,6 +226,7 @@ def solve(raw,stop,progress=lambda value:None):
         report={**best,'comparison':comparison.copy(),'iterations':0,'seconds':time.monotonic()-started,'timedOut':False,'stopped':False,'phase':phase,'acceptedMoves':moves}
         progress(report)
         return True
+    compact_complete(best['placements'],instances,s,deadline,stop,accept,axis='x')
     compact_complete(best['placements'],instances,s,deadline,stop,accept)
     # Reinsert a complete source group into earlier gaps, from the roll tail
     # backwards. Other panels remain fixed, so an interrupted attempt cannot
@@ -245,10 +258,60 @@ def solve(raw,stop,progress=lambda value:None):
         if not result['valid']:raise ValueError('候选方案独立复核失败')
         if iteration==0:comparison.append({'label':'真实轮廓初始方案','length':result['stats']['length'],'effectiveUtilization':result['stats']['effectiveUtilization'],'seconds':time.monotonic()-started})
         candidate_score=layout_score(result['placements'],instances)
-        if candidate_score<score:best=result;score=candidate_score;best_order=trial[:];moves+=1
+        if candidate_score<score:
+            best=result;score=candidate_score;best_order=trial[:];moves+=1
+            compact_complete(best['placements'],instances,s,deadline,stop,accept,axis='x')
+            compact_complete(best['placements'],instances,s,deadline,stop,accept)
         report={**best,'comparison':comparison.copy(),'iterations':iteration+1,'seconds':time.monotonic()-started,'timedOut':False,'stopped':False,'phase':'多起点搜索','acceptedMoves':moves}
         progress(report)
     report.update(seconds=time.monotonic()-started,timedOut=time.monotonic()>=deadline,stopped=stop.is_set(),warmStarted=warm)
     report['comparison']=comparison+[{'label':'当前找到的最佳方案','length':best['stats']['length'],'effectiveUtilization':best['stats']['effectiveUtilization'],'seconds':report['seconds']}]
     progress(report)
     return report
+
+
+def solve(raw,stop,progress=lambda value:None):
+    """Search rigid source-image groups as exact unions of occupied contours.
+
+    Expand only after placement: both source panels share X, Y and angle.
+    White source margins do not consume fabric. Legacy nonfixed projects remain
+    readable; the UI migrates their pair constraint before reoptimization.
+    """
+    if not any(p.get('fixedPair') for p in raw.get('pieces',[])):
+        return _solve_panels(raw,stop,progress)
+    from geometry import rings
+    _,catalog,instances=prepare(raw)
+    units=grouped_order(list(instances),instances)
+    collapsed=[];mapping={};placements=[]
+    existing={p['key']:p for p in raw.get('placements',[])}
+    for unit in units:
+        members=[instances[k] for k in unit]
+        rigid=any(p.get('fixedPair') for p in members)
+        if not rigid:
+            for key in unit:
+                collapsed.append(instances[key]);mapping[key]=[key]
+                if key in existing:placements.append(existing[key])
+            continue
+        first=members[0];pid=first['id'];key=pid+'::0'
+        joined=unary_union([m['occupied'] for m in members])
+        # Occupied geometry already contains each member's own bleed/tolerance.
+        collapsed.append({**first,'contours':rings(joined),'bleed':0,'contourTolerance':0,
+            'verticalOnly':False,'fixedPair':False,'allow180':all(m.get('allow180',True) for m in members)})
+        mapping[key]=unit
+        old=[existing[k] for k in unit if k in existing]
+        locked=any(p.get('locked') for p in old)
+        aligned=len(old)==len(unit) and all(abs(p['x']-old[0]['x'])<EPS and abs(p['y']-old[0]['y'])<EPS and p['angle']==old[0]['angle'] for p in old)
+        if locked and not aligned:raise ValueError('旧方案左右片已错位，请解除该组锁定后重新排料')
+        if aligned:placements.append({**old[0],'key':key,'pieceId':pid,'locked':locked})
+    reduced={**raw,'pieces':collapsed,'placements':placements}
+    def expand(report):
+        output=[]
+        for p in report['placements']:
+            for key in mapping[p['key']]:
+                output.append({**p,'key':key,'pieceId':instances[key]['id'],
+                    'locked':bool(existing.get(key,{}).get('locked'))})
+        checked=validate({**raw,'placements':output})
+        if not checked['valid']:raise ValueError('整组排料独立复核失败：'+checked['errors'][0]['message'])
+        return {**report,**checked,'phase':'整组 · '+report.get('phase','优化')}
+    answer=_solve_panels(reduced,stop,lambda report:progress(expand(report)))
+    return expand(answer)

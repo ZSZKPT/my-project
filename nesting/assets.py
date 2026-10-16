@@ -116,7 +116,7 @@ def split_garment_pair(g,base):
         shape=unary_union([Polygon(p.exterior) for p in ([shape] if shape.geom_type=='Polygon' else shape.geoms)])
         side='left' if i==0 else 'right'
         result.append({**base,'id':base['id']+'-'+side,'sourceGroup':base['id'],'sourcePart':side,
-            'verticalOnly':True,'sourcePartCount':2,'name':base['name']+(' · 左片' if i==0 else ' · 右片'),
+            'verticalOnly':True,'fixedPair':True,'sourcePartCount':2,'name':base['name']+(' · 左片' if i==0 else ' · 右片'),
             'contours':rings(shape),'confirmed':True,
             'contourSource':'左右双片：保持横向关系、仅上下错位；保留二维码/连接条/尺码与全部识别前景'})
     if not unary_union([polygon_from_rings(p['contours']) for p in result]).covers(g):

@@ -25,7 +25,7 @@ class NativeBridge:
 
     def info(self):
         self._check_origin()
-        return {'embedded':True,'version':'4.0','nativeSave':True}
+        return {'embedded':True,'version':'5.0','nativeSave':True}
 
     def _choose(self,name):
         import webview
