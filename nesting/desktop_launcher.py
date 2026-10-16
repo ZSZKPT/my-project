@@ -9,7 +9,6 @@ import sys
 import threading
 import time
 from http.server import ThreadingHTTPServer
-import webbrowser
 
 
 def configure_logging():
@@ -54,38 +53,72 @@ def self_test():
 
 
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument('--self-test',action='store_true');args=parser.parse_args()
+    parser=argparse.ArgumentParser()
+    parser.add_argument('--self-test',action='store_true')
+    parser.add_argument('--window-test',action='store_true')
+    args=parser.parse_args()
     logfile=configure_logging()
+    service=None
     try:
         if args.self_test:
             self_test();logging.info('EXE self-test passed');return 0
-        import tkinter as tk
-        from tkinter import ttk,messagebox
+        import webview
+        from native_bridge import NativeBridge
         from server import Handler
-        # Per-process ephemeral port avoids accidentally opening an older server.
         service=ThreadingHTTPServer(('127.0.0.1',0),Handler)
-        thread=threading.Thread(target=service.serve_forever,daemon=True);thread.start()
+        server_thread=threading.Thread(target=service.serve_forever,daemon=True);server_thread.start()
         url=f'http://127.0.0.1:{service.server_port}'
-        root=tk.Tk();root.title('布序 v2 · 压紧回填优化版');root.geometry('440x220');root.resizable(False,False)
-        frame=ttk.Frame(root,padding=24);frame.pack(fill='both',expand=True)
-        ttk.Label(frame,text='布序 v2 · 排料优化版已启动',font=('Microsoft YaHei',15)).pack(anchor='w')
-        ttk.Label(frame,text='110 DPI · 左右片只上下错位 · 二维码和标签随片打印').pack(anchor='w',pady=(13,5))
-        ttk.Label(frame,text='请保留此窗口。关闭窗口将停止本地应用。').pack(anchor='w',pady=(0,15))
-        ttk.Button(frame,text='打开排料界面',command=lambda:webbrowser.open(url)).pack(anchor='w')
-        def close():
-            service.shutdown();service.server_close();root.destroy()
-        root.protocol('WM_DELETE_WINDOW',close)
-        root.after(250,lambda:webbrowser.open(url));root.mainloop();thread.join(timeout=3)
+        bridge=NativeBridge(url)
+        webview.settings['ALLOW_DOWNLOADS']=True
+        webview.settings['ALLOW_FILE_URLS']=False
+        webview.settings['OPEN_EXTERNAL_LINKS_IN_BROWSER']=False
+        window=webview.create_window('布序 v3 · 本地排料工作台',url,js_api=bridge,
+            width=1440,height=960,min_size=(1000,700),background_color='#f6f5f0')
+        bridge._window=window
+        state={'passed':False,'error':None}
+        def check_window():
+            try:
+                if not window.events.shown.wait(45):raise RuntimeError('桌面窗口未能显示')
+                renderer=getattr(window.gui,'renderer','')
+                if sys.platform=='win32' and renderer!='edgechromium':
+                    raise RuntimeError('系统缺少Microsoft Edge WebView2运行时。请从微软安装后重新启动：https://go.microsoft.com/fwlink/p/?LinkId=2124703')
+                if not args.window_test:return
+                if not window.events.loaded.wait(45):raise RuntimeError('软件界面加载超时')
+                for _ in range(100):
+                    dom=window.evaluate_js("Boolean(document.getElementById('solve') && document.getElementById('exportJpg') && window.pywebview && window.pywebview.api)")
+                    if dom:break
+                    time.sleep(.2)
+                else:raise RuntimeError('内嵌界面或原生保存接口未就绪')
+                window.evaluate_js("window.pywebview.api.info().then(info => { window.__buxuNativeInfo = info; })")
+                for _ in range(50):
+                    if window.evaluate_js("Boolean(window.__buxuNativeInfo && window.__buxuNativeInfo.embedded)"):break
+                    time.sleep(.2)
+                else:raise RuntimeError('原生文件桥接未响应')
+                if window.evaluate_js("document.getElementById('importDpi').value")!='110':raise RuntimeError('默认DPI不正确')
+                state['passed']=True
+                logging.info('Embedded WebView2 window self-test passed; native bridge ready; 110 DPI')
+            except Exception as exc:
+                state['error']=str(exc);logging.exception('Embedded window test failed')
+            finally:
+                if args.window_test or state['error']:
+                    try:window.destroy()
+                    except Exception:logging.exception('Closing embedded window failed')
+        webview.start(check_window,gui='edgechromium',debug=False,private_mode=True,
+            storage_path=str(logfile.parent/'webview'))
+        if state['error']:raise RuntimeError(state['error'])
+        if args.window_test and not state['passed']:raise RuntimeError('内嵌桌面窗口未完成自测')
         return 0
     except Exception as exc:
         logging.exception('Desktop startup failed')
-        if not args.self_test:
+        if not args.self_test and not args.window_test:
             try:
                 import tkinter as tk
                 from tkinter import messagebox
                 root=tk.Tk();root.withdraw();messagebox.showerror('布序启动失败',f'{exc}\n\n日志：{logfile}');root.destroy()
             except Exception:pass
         return 1
+    finally:
+        if service is not None:service.shutdown();service.server_close()
 
 
 if __name__=='__main__':sys.exit(main())

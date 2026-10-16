@@ -1,3 +1,17 @@
+# 布序 v3 · 独立软件界面
+
+v3将导入、排料、预览、项目保存和生产JPG导出全部放在同一个桌面软件窗口内，不再启动外部浏览器或显示单独的启动控制窗口。关闭软件即停止本地服务。导出和保存项目使用Windows原生“另存为”对话框；生产文件在Python端直接生成保存，不把大型JPG经浏览器下载栏中转。
+
+构建通过后发布： https://github.com/ZSZKPT/my-project/releases/download/buxu-desktop-v3/BuxuNesting.exe
+
+保留110DPI、自动双片识别、不逐片确认、不受导入顺序约束、压紧/尾部回填、3mm可调间距、二维码/连接条/尺码随片打印及完整长JPG输出。原图仍只在本机处理。开发用HTTP服务仅绑定随机本机端口，正常使用不需要手动访问地址。
+
+桌面引擎为pywebview + Microsoft Edge WebView2。Windows10/11一般已有此微软组件；缺少时软件会明确提示安装运行时，不会回退到不支持现代界面的IE引擎。日志位置保持为 %LOCALAPPDATA%\BuxuNesting\desktop.log。
+
+源码开发桌面模式需要 `python -m pip install -r requirements-desktop.txt` 后运行 `python desktop_launcher.py`。Windows CI同时运行编译后程序的 `--self-test`（排料/导出/HTTP）和 `--window-test`（真正打开内嵌窗口、确认DOM及原生保存接口就绪）。只有两者通过才发布EXE。
+
+以下为既有算法与源码说明，v2及更早版的外部浏览器启动方式已由v3取代。
+
 # 布序 v2 · 压紧与回填优化版
 
 Windows EXE下载（构建通过后发布）：https://github.com/ZSZKPT/my-project/releases/download/buxu-desktop-v2/BuxuNesting.exe
