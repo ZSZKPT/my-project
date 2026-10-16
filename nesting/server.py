@@ -10,7 +10,7 @@ import traceback
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
-from assets import import_asset
+from assets import import_asset,FragmentedContour
 from geometry import validate
 from engine import solve
 from exporting import production_zip,svg_document,csv_text
@@ -105,6 +105,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(csv_text(raw['project']),ctype='text/csv; charset=utf-8',filename='positions.csv')
             if path=='/api/export/zip':return self.send(production_zip(raw['project'],raw.get('segmentMm',2000)),ctype='application/zip',filename='production.zip')
             return self.send({'error':'未找到'},404)
+        except FragmentedContour as exc:self.send({'error':str(exc),**exc.details},400)
         except (ValueError,TypeError,KeyError,IndexError,OverflowError) as exc:self.send({'error':str(exc)},400)
         except Exception as exc:
             traceback.print_exc();self.send({'error':str(exc)},400)

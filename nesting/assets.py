@@ -14,6 +14,16 @@ from geometry import number, rings
 MAX_BYTES=24*1024*1024
 Image.MAX_IMAGE_PIXELS=20_000_000
 
+class FragmentedContour(ValueError):
+    def __init__(self,polys):
+        areas=sorted((p.area for p in polys),reverse=True)
+        cutoff=math.floor(areas[100])+1
+        keep=[a for a in areas if a>=cutoff]
+        self.details={'code':'fragmented_contour','components':len(areas),
+            'suggestedMinArea':cutoff if keep else None,'keptComponents':len(keep),
+            'removedAreaPercent':100*sum(a for a in areas if a<cutoff)/sum(areas)}
+        super().__init__(f'识别到{len(areas)}个独立区域，可能是背景噪点或分离印花；请选择去噪、保守包络或配套SVG')
+
 def data_url(raw,mime):return f'data:{mime};base64,'+base64.b64encode(raw).decode()
 
 def decode_data(url):
@@ -44,6 +54,8 @@ def physical(value):
 
 def raster_contour(image,mode,threshold,bg,min_area):
     if mode=='rectangle':return box(0,0,*image.size),True
+    hull=mode.endswith('-hull')
+    mode=mode.removesuffix('-hull')
     if mode=='alpha':
         if 'A' not in image.getbands() or image.getchannel('A').getextrema()[0]==255:
             raise ValueError('图片没有有效透明背景，请选择背景识别、配套SVG或明确使用矩形')
@@ -66,9 +78,11 @@ def raster_contour(image,mode,threshold,bg,min_area):
             if len(rects)>150000:raise ValueError('轮廓噪点过多，请提高背景阈值、清理原图或使用SVG切割线')
     if not rects:raise ValueError('未识别到裁片，请调整阈值')
     g=unary_union(rects);polys=[g] if g.geom_type=='Polygon' else list(g.geoms)
+    # Hull mode intentionally preserves every detected foreground component.
+    if hull:return g.convex_hull,False
     polys=[Polygon(p.exterior) for p in polys if p.area>=min_area]
     if not polys:raise ValueError('去噪后轮廓为空')
-    if len(polys)>100:raise ValueError('独立轮廓超过100个，请调整阈值或去噪')
+    if len(polys)>100:raise FragmentedContour(polys)
     return unary_union(polys),False
 
 def import_asset(request):
@@ -130,6 +144,6 @@ def import_asset(request):
     g=affinity.scale(g,xfact=w/image.width,yfact=h/image.height,origin=(0,0))
     base.update(width=w,height=h,contours=rings(g),pixelWidth=image.width,pixelHeight=image.height,dpi=list(dpi) if dpi else None,
         dimensionConfirmed=bool(supplied or dpi),mime='image/jpeg' if image.format=='JPEG' else 'image/png',
-        contourSource='明确选择的矩形' if rectangle else ('透明通道像素外轮廓' if mode=='alpha' else '背景颜色识别候选（必须人工核对）'),
+        contourSource='明确选择的矩形' if rectangle else ('保守凸包：保留全部识别前景并填补凹口/间隙，不等于真实裁切线（必须核对）' if mode.endswith('-hull') else ('透明通道像素外轮廓' if mode=='alpha' else f'背景颜色识别候选；去噪阈值{min_area:g}像素²（必须人工核对）')),
         hasICC=bool(image.info.get('icc_profile')),mode=mode,threshold=threshold)
     return base

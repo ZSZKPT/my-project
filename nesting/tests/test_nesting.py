@@ -13,7 +13,7 @@ from PIL import Image,ImageDraw
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from geometry import prepare,validate,placed,polygon
 from engine import solve
-from assets import import_asset,data_url,safe_svg
+from assets import import_asset,data_url,safe_svg,raster_contour,FragmentedContour
 from exporting import svg_document,production_zip
 from examples.make_demo import create
 
@@ -62,6 +62,27 @@ class GeometryTests(unittest.TestCase):
         self.assertEqual(tuple(round(v,5) for v in placed(inst['a::0'],pos('a',0,0,180)).bounds),(20,20,90,75))
 
 class ImportTests(unittest.TestCase):
+    def fragmented(self):
+        im=Image.new('RGB',(500,500),'white');d=ImageDraw.Draw(im)
+        d.rectangle((10,10,160,160),fill='blue')
+        for x in range(220,440,20):
+            for y in range(220,440,20):d.point((x,y),fill='black')
+        return im
+    def test_fragmentation_reports_measured_denoise_threshold(self):
+        im=self.fragmented()
+        with self.assertRaises(FragmentedContour) as raised:raster_contour(im,'background',20,'#ffffff',0)
+        info=raised.exception.details
+        self.assertEqual(info['components'],122);self.assertEqual(info['suggestedMinArea'],2)
+        self.assertEqual(info['keptComponents'],1)
+        clean,_=raster_contour(im,'background',20,'#ffffff',info['suggestedMinArea'])
+        self.assertAlmostEqual(clean.area,151*151)
+    def test_explicit_hull_preserves_all_foreground_without_discard(self):
+        im=self.fragmented();hull,_=raster_contour(im,'background-hull',20,'#ffffff',99999)
+        from shapely.geometry import Point
+        self.assertEqual(hull.geom_type,'Polygon')
+        for x in range(220,440,20):
+            for y in range(220,440,20):self.assertTrue(hull.covers(Point(x+.5,y+.5)))
+        self.assertTrue(hull.covers(Point(10,10)))
     def encode(self,image,fmt,**kw):
         raw=io.BytesIO();image.save(raw,fmt,**kw);return data_url(raw.getvalue(),'image/jpeg' if fmt=='JPEG' else 'image/png')
     def test_jpg_background_and_missing_dpi(self):

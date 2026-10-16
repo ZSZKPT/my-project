@@ -49,9 +49,13 @@ async function main(){
   await page.locator('#files').setInputFiles([fixture]);await page.locator('#importDpi').fill('');await page.locator('#confirmImport').click();await page.locator('#pieceDialog').waitFor();
   assert.equal(await page.locator('#pieceWidth').inputValue(),'');await page.locator('#pieceConfirmed').check();await page.locator('#savePiece').click();assert.equal(await page.locator('#pieceDialog').isVisible(),true);
   await page.locator('#pieceWidth').fill('127');await page.locator('#pieceHeight').fill('152.4');await page.locator('#pieceConfirmed').check();await page.locator('#savePiece').click();assert.equal(await page.locator('.piece-row').count(),7);
+  const fragmented=path.join(__dirname,'fixtures','fragmented.jpg');
+  await page.locator('#files').setInputFiles([fragmented]);await page.locator('#importDpi').fill('100');
+  page.once('dialog',dialog=>dialog.accept('2'));await page.locator('#confirmImport').click();await page.locator('#pieceDialog').waitFor();
+  assert.match(await page.locator('#contourSource').textContent(),/保守凸包/);await page.locator('#pieceConfirmed').check();await page.locator('#savePiece').click();assert.equal(await page.locator('.piece-row').count(),8);
   await page.setViewportSize({width:390,height:844});await page.screenshot({path:path.join(out,'mobile.png'),fullPage:true});
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
-  assert.deepEqual(errors,[]);console.log('Browser QA passed: layout, locks, stop, conflicts, undo, SVG/ZIP/PNG, project roundtrip, JPEG repeated files, missing-DPI block, mobile; no page errors.');
+  assert.deepEqual(errors,[]);console.log('Browser QA passed: layout, locks, stop, conflicts, undo, SVG/ZIP/PNG, project roundtrip, JPEG repeated files, missing-DPI block, fragmented-JPEG hull recovery, mobile; no page errors.');
  }finally{await browser.close()}
 }
 main().catch(e=>{console.error(e);process.exitCode=1});

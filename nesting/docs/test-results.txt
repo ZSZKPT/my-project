@@ -12,6 +12,8 @@ test_no_other_angles_no_mirror_and_per_piece_flag (test_nesting.GeometryTests.te
 test_oversized_and_invalid_polygons (test_nesting.GeometryTests.test_oversized_and_invalid_polygons) ... ok
 test_rotation_source_coordinates (test_nesting.GeometryTests.test_rotation_source_coordinates) ... ok
 test_dpi_and_rectangle_explicit (test_nesting.ImportTests.test_dpi_and_rectangle_explicit) ... ok
+test_explicit_hull_preserves_all_foreground_without_discard (test_nesting.ImportTests.test_explicit_hull_preserves_all_foreground_without_discard) ... ok
+test_fragmentation_reports_measured_denoise_threshold (test_nesting.ImportTests.test_fragmentation_reports_measured_denoise_threshold) ... ok
 test_jpg_background_and_missing_dpi (test_nesting.ImportTests.test_jpg_background_and_missing_dpi) ... ok
 test_png_holes_filled (test_nesting.ImportTests.test_png_holes_filled) ... ok
 test_svg_units_transforms_selection_curves (test_nesting.ImportTests.test_svg_units_transforms_selection_curves) ... ok
@@ -21,8 +23,8 @@ test_install_failure_keeps_error_and_does_not_open_browser (test_windows_bootstr
 test_old_python_logs_actionable_error_without_launching (test_windows_bootstrap.WindowsStartupTests.test_old_python_logs_actionable_error_without_launching) ... ok
 
 ----------------------------------------------------------------------
-Ran 21 tests in 1.263s
+Ran 23 tests in 1.298s
 
 OK
 
-100文件测试：1.001s，Python峰值分配0.32MiB（不含GEOS原生内存）
+100文件测试：1.003s，Python峰值分配0.33MiB（不含GEOS原生内存）
