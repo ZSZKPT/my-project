@@ -66,9 +66,9 @@ def main():
         service=ThreadingHTTPServer(('127.0.0.1',0),Handler)
         thread=threading.Thread(target=service.serve_forever,daemon=True);thread.start()
         url=f'http://127.0.0.1:{service.server_port}'
-        root=tk.Tk();root.title('布序 · 本地排料');root.geometry('440x220');root.resizable(False,False)
+        root=tk.Tk();root.title('布序 v2 · 压紧回填优化版');root.geometry('440x220');root.resizable(False,False)
         frame=ttk.Frame(root,padding=24);frame.pack(fill='both',expand=True)
-        ttk.Label(frame,text='布序 · 智能排料已启动',font=('Microsoft YaHei',15)).pack(anchor='w')
+        ttk.Label(frame,text='布序 v2 · 排料优化版已启动',font=('Microsoft YaHei',15)).pack(anchor='w')
         ttk.Label(frame,text='110 DPI · 左右片只上下错位 · 二维码和标签随片打印').pack(anchor='w',pady=(13,5))
         ttk.Label(frame,text='请保留此窗口。关闭窗口将停止本地应用。').pack(anchor='w',pady=(0,15))
         ttk.Button(frame,text='打开排料界面',command=lambda:webbrowser.open(url)).pack(anchor='w')

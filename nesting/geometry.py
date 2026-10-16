@@ -110,7 +110,8 @@ def placement_fields(p,instances):
 
 def conflicts(a,b,gap):
     # Area intersection detects coincident boundaries correctly when gap=0.
-    return a.intersection(b).area > EPS or (gap>0 and a.distance(b)<gap-EPS)
+    if gap>EPS:return a.distance(b)<gap-EPS
+    return a.intersection(b).area > EPS
 
 def validate(raw, partial=False):
     s,catalog,instances=prepare(raw); errors=[]; checked=[]; geoms=[]; seen=set()

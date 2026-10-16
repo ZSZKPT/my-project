@@ -11,9 +11,70 @@ class Interrupted(Exception):pass
 def grouped_order(order,instances):
     units={}
     for key in order:
-        item=instances[key];gid=item.get('sourceGroup') if item.get('verticalOnly') else key
+        item=instances[key];gid=('group',item.get('sourceGroup')) if item.get('verticalOnly') else ('single',key)
         units.setdefault(gid,[]).append(key)
     return list(units.values())
+
+def clear_at(g,tree,geoms,gap):
+    if gap>EPS:
+        # GEOS performs both the spatial filtering and exact distance in C.
+        return not len(tree.query(g,predicate='dwithin',distance=max(0,gap-EPS)))
+    return not any(g.intersection(geoms[int(j)]).area>EPS for j in tree.query(g,predicate='intersects'))
+
+def layout_score(layout,instances):
+    shapes=[placed(instances[p['key']],p) for p in layout]
+    return (round(max((g.bounds[3] for g in shapes),default=0),6),
+            round(sum(g.area*g.centroid.y for g in shapes),4))
+
+def compact_complete(layout,instances,s,deadline,stop,on_improvement):
+    """Move individual panels only upward; every intermediate layout is complete.
+
+    X and angle remain unchanged, including paired panels and locked siblings.
+    Test free intervals from top to bottom rather than stopping at the first
+    obstacle below the current position: this can fill earlier enclosed gaps.
+    """
+    current=[p.copy() for p in layout];moves=0
+    for _ in range(2):
+        moved_in_pass=False
+        order=sorted(range(len(current)),key=lambda i:placed(instances[current[i]['key']],current[i]).bounds[3],reverse=True)
+        for index in order:
+            if stop.is_set() or time.monotonic()>=deadline:return current,moves
+            p=current[index]
+            if p.get('locked'):continue
+            local=oriented(instances[p['key']],p['angle']);a,b,c,d=local.bounds
+            others=[placed(instances[q['key']],q) for j,q in enumerate(current) if j!=index]
+            tree=STRtree(others)
+            relevant=[g for g in others if g.bounds[2]>=p['x']+a-s['gap'] and g.bounds[0]<=p['x']+c+s['gap']]
+            bottom=s['head']-b;top=p['y']
+            if top<=bottom+EPS:continue
+            ys={bottom,top}
+            for obstacle in relevant:
+                oy0,oy1=obstacle.bounds[1],obstacle.bounds[3]
+                ys.update((oy0-d-s['gap'],oy1-b+s['gap']))
+                for _,v in vertices(obstacle,8):
+                    ys.update((v-b+s['gap'],v-d-s['gap']))
+            step=max(2,min(20,(d-b)/8),(top-bottom)/160)
+            for n in range(int((top-bottom)/step)+1):ys.add(bottom+n*step)
+            previous=bottom;best=None
+            for y in sorted(v for v in ys if bottom-EPS<=v<top-EPS):
+                if stop.is_set() or time.monotonic()>=deadline:return current,moves
+                candidate=affinity.translate(local,p['x'],y)
+                if clear_at(candidate,tree,others,s['gap']):
+                    best=y
+                    # Local refinement never assumes global monotonicity.
+                    low=previous;high=y
+                    for _ in range(12):
+                        if high-low<.01 or stop.is_set() or time.monotonic()>=deadline:break
+                        middle=(low+high)/2
+                        if clear_at(affinity.translate(local,p['x'],middle),tree,others,s['gap']):high=middle
+                        else:low=middle
+                    best=high;break
+                previous=y
+            if best is not None and best<top-.01:
+                current[index]={**p,'y':best};moves+=1;moved_in_pass=True
+                on_improvement(current,'上下压紧',moves)
+        if not moved_in_pass:break
+    return current,moves
 
 def vertices(g,limit=24):
     polys=[g] if g.geom_type=='Polygon' else g.geoms
@@ -92,7 +153,7 @@ def pack(order,instances,s,locks,deadline,stop,orientation_cache=None):
                 for x in xs:
                     if time.monotonic()>deadline or stop.is_set():raise Interrupted()
                     moved=affinity.translate(g,x,y)
-                    if any(conflicts(moved,geoms[int(j)],s['gap']) for j in tree.query(moved.buffer(s['gap']+EPS))):continue
+                    if not clear_at(moved,tree,geoms,s['gap']):continue
                     score=(max(top,y+d),y+b,x+a,angle)
                     if best is None or score<best[0:4]:best=(*score,x,y,angle,moved)
                     break
@@ -112,9 +173,41 @@ def solve(raw,stop,progress=lambda value:None):
     best=validate({**raw,'placements':base})
     if not best['valid']:raise ValueError('初始方案复核失败')
     comparison=[{'label':'外接矩形顺序排料','length':best['stats']['length'],'effectiveUtilization':best['stats']['effectiveUtilization'],'seconds':time.monotonic()-started}]
-    report={**best,'comparison':comparison.copy(),'iterations':0,'seconds':time.monotonic()-started,'timedOut':False,'stopped':False}
+    moves=0;warm=False
+    if raw.get('placements'):
+        previous=validate(raw)
+        if previous['valid'] and layout_score(previous['placements'],instances)<layout_score(best['placements'],instances):
+            best=previous;warm=True
+    report={**best,'comparison':comparison.copy(),'iterations':0,'seconds':time.monotonic()-started,'timedOut':False,'stopped':False,'phase':'已有方案' if warm else '初始可行方案','acceptedMoves':0}
     progress(report)
     rng=random.Random(s['seed']);deadline=started+s['seconds'];best_order=order[:];orientation_cache={}
+    score=layout_score(best['placements'],instances)
+    def accept(candidate,phase,unused=0):
+        nonlocal best,score,report,moves
+        candidate_score=layout_score(candidate,instances)
+        if candidate_score>=score:return False
+        checked=validate({**raw,'placements':candidate})
+        if not checked['valid']:raise ValueError('压紧/回填方案独立复核失败：'+checked['errors'][0]['message'])
+        best=checked;score=candidate_score;moves+=1
+        report={**best,'comparison':comparison.copy(),'iterations':0,'seconds':time.monotonic()-started,'timedOut':False,'stopped':False,'phase':phase,'acceptedMoves':moves}
+        progress(report)
+        return True
+    compact_complete(best['placements'],instances,s,deadline,stop,accept)
+    # Reinsert a complete source group into earlier gaps, from the roll tail
+    # backwards. Other panels remain fixed, so an interrupted attempt cannot
+    # discard any previously validated complete layout.
+    units=grouped_order(order,instances)
+    current={p['key']:p for p in best['placements']}
+    units.sort(key=lambda unit:max(placed(instances[k],current[k]).bounds[3] for k in unit),reverse=True)
+    for unit in units:
+        if stop.is_set() or time.monotonic()>=deadline:break
+        selected_keys=set(unit)
+        fixed=[p for p in best['placements'] if p['key'] not in selected_keys]
+        trial=sorted(unit,key=lambda k:-instances[k]['geom'].area)
+        try:candidate=pack(trial,instances,s,fixed,deadline,stop,orientation_cache)
+        except Interrupted:break
+        accept(candidate,'尾部整组回填')
+    compact_complete(best['placements'],instances,s,deadline,stop,accept)
     for iteration in range(s['iterations']):
         if stop.is_set() or time.monotonic()>deadline:break
         if iteration==0:trial=sorted(order,key=lambda k:-instances[k]['geom'].area)
@@ -131,10 +224,11 @@ def solve(raw,stop,progress=lambda value:None):
         result=validate({**raw,'placements':candidate})
         if not result['valid']:raise ValueError('候选方案独立复核失败')
         if iteration==0:comparison.append({'label':'真实轮廓初始方案','length':result['stats']['length'],'effectiveUtilization':result['stats']['effectiveUtilization'],'seconds':time.monotonic()-started})
-        if result['stats']['length']<best['stats']['length']-EPS:best=result;best_order=trial[:]
-        report={**best,'comparison':comparison.copy(),'iterations':iteration+1,'seconds':time.monotonic()-started,'timedOut':False,'stopped':False}
+        candidate_score=layout_score(result['placements'],instances)
+        if candidate_score<score:best=result;score=candidate_score;best_order=trial[:];moves+=1
+        report={**best,'comparison':comparison.copy(),'iterations':iteration+1,'seconds':time.monotonic()-started,'timedOut':False,'stopped':False,'phase':'多起点搜索','acceptedMoves':moves}
         progress(report)
-    report.update(seconds=time.monotonic()-started,timedOut=time.monotonic()>=deadline,stopped=stop.is_set())
+    report.update(seconds=time.monotonic()-started,timedOut=time.monotonic()>=deadline,stopped=stop.is_set(),warmStarted=warm)
     report['comparison']=comparison+[{'label':'当前找到的最佳方案','length':best['stats']['length'],'effectiveUtilization':best['stats']['effectiveUtilization'],'seconds':report['seconds']}]
     progress(report)
     return report
