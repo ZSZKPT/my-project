@@ -27,7 +27,12 @@ jobs:
           python -m pip install pyinstaller==6.16.0
       - name: Test geometry, paired panels, and labels
         id: tests
-        run: python -m unittest discover -s nesting/tests -v
+        shell: pwsh
+        run: |
+          python -m unittest discover -s nesting/tests -v *> "$env:RUNNER_TEMP/buxu-tests.log"
+          $code = $LASTEXITCODE
+          Get-Content "$env:RUNNER_TEMP/buxu-tests.log"
+          if ($code -ne 0) { exit $code }
       - name: Build self-contained EXE
         id: package
         working-directory: nesting
@@ -96,6 +101,8 @@ jobs:
           $report = @{status='${{ job.status }}';sourceCommit=$env:GITHUB_SHA;runId=$env:GITHUB_RUN_ID;install='${{ steps.install.outcome }}';tests='${{ steps.tests.outcome }}';package='${{ steps.package.outcome }}';selftest='${{ steps.selftest.outcome }}';release='${{ steps.release.outcome }}';binary='${{ steps.binary.outcome }}'}
           $log = "$env:LOCALAPPDATA/BuxuNesting/desktop.log"
           if (Test-Path $log) { $report.selfTestLog = Get-Content $log -Raw }
+          $tests = "$env:RUNNER_TEMP/buxu-tests.log"
+          if (Test-Path $tests) { $report.testLog = (Get-Content $tests -Tail 160) -join "`n" }
           $report | ConvertTo-Json | Out-File build-status.json -Encoding utf8
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
