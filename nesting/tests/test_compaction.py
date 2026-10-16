@@ -60,5 +60,14 @@ class CompactionTests(unittest.TestCase):
         self.assertTrue(second['valid']);self.assertTrue(second['warmStarted'])
         self.assertLessEqual(second['stats']['length'],first['stats']['length'])
 
+    def test_small_first_import_does_not_constrain_larger_panels(self):
+        parts=[piece('small',0,0,200,40),piece('large',0,0,650,400),piece('medium',0,0,300,200)]
+        raw=task(parts);result=solve(raw,threading.Event())
+        other=task(list(reversed(parts)));again=solve(other,threading.Event())
+        self.assertTrue(result['valid']);self.assertTrue(again['valid'])
+        self.assertLessEqual(result['stats']['length'],result['comparison'][0]['length'])
+        self.assertLessEqual(again['stats']['length'],again['comparison'][0]['length'])
+        self.assertAlmostEqual(result['stats']['length'],again['stats']['length'],places=2)
+
 
 if __name__=='__main__':unittest.main()

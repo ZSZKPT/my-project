@@ -15,6 +15,21 @@ def grouped_order(order,instances):
         units.setdefault(gid,[]).append(key)
     return list(units.values())
 
+def geometry_orders(order,instances):
+    """No import-order constraint. Sort whole source groups by geometry first."""
+    units=grouped_order(order,instances)
+    def metrics(unit):
+        shapes=[instances[k]['occupied'] for k in unit]
+        bounds=unary_union(shapes).bounds
+        return sum(g.area for g in shapes),bounds[2]-bounds[0],bounds[3]-bounds[1]
+    data={tuple(unit):metrics(unit) for unit in units}
+    def identity(unit):return tuple(sorted((instances[k].get('filename',''),k) for k in unit))
+    orders=[]
+    for criterion in range(3):
+        chosen=sorted(units,key=lambda unit:(-data[tuple(unit)][criterion],-data[tuple(unit)][0],identity(unit)))
+        orders.append([key for unit in chosen for key in sorted(unit,key=lambda k:(-instances[k]['geom'].area,k))])
+    return orders
+
 def clear_at(g,tree,geoms,gap):
     if gap>EPS:
         # GEOS performs both the spatial filtering and exact distance in C.
@@ -174,13 +189,20 @@ def solve(raw,stop,progress=lambda value:None):
     if not best['valid']:raise ValueError('初始方案复核失败')
     comparison=[{'label':'外接矩形顺序排料','length':best['stats']['length'],'effectiveUtilization':best['stats']['effectiveUtilization'],'seconds':time.monotonic()-started}]
     moves=0;warm=False
+    geometric_orders=geometry_orders(order,instances)
+    for alternative in geometric_orders:
+        placements=baseline(alternative,instances,s,locks)
+        if layout_score(placements,instances)<layout_score(best['placements'],instances):
+            checked=validate({**raw,'placements':placements})
+            if not checked['valid']:raise ValueError('几何重排初始方案复核失败')
+            best=checked
     if raw.get('placements'):
         previous=validate(raw)
         if previous['valid'] and layout_score(previous['placements'],instances)<layout_score(best['placements'],instances):
             best=previous;warm=True
     report={**best,'comparison':comparison.copy(),'iterations':0,'seconds':time.monotonic()-started,'timedOut':False,'stopped':False,'phase':'已有方案' if warm else '初始可行方案','acceptedMoves':0}
     progress(report)
-    rng=random.Random(s['seed']);deadline=started+s['seconds'];best_order=order[:];orientation_cache={}
+    rng=random.Random(s['seed']);deadline=started+s['seconds'];best_order=geometric_orders[0] if geometric_orders else order[:];orientation_cache={}
     score=layout_score(best['placements'],instances)
     def accept(candidate,phase,unused=0):
         nonlocal best,score,report,moves
@@ -210,9 +232,7 @@ def solve(raw,stop,progress=lambda value:None):
     compact_complete(best['placements'],instances,s,deadline,stop,accept)
     for iteration in range(s['iterations']):
         if stop.is_set() or time.monotonic()>deadline:break
-        if iteration==0:trial=sorted(order,key=lambda k:-instances[k]['geom'].area)
-        elif iteration==1:trial=sorted(order,key=lambda k:-(instances[k]['occupied'].bounds[3]-instances[k]['occupied'].bounds[1]))
-        elif iteration==2:trial=sorted(order,key=lambda k:-(instances[k]['occupied'].bounds[2]-instances[k]['occupied'].bounds[0]))
+        if iteration<3:trial=geometric_orders[iteration]
         else:
             trial=best_order[:]
             if len(trial)>1:
