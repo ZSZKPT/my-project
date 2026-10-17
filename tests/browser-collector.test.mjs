@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-const state={},alarms=[],downloads=[];let onMessage;const downloadListeners=[];const onDownloadChanged=event=>downloadListeners.forEach(f=>f(event));
+const state={},alarms=[],downloads=[],zipRequests=[];let onMessage;const downloadListeners=[];const onDownloadChanged=event=>downloadListeners.forEach(f=>f(event));
 let captureSequence=null,stopOnAdvance=false;
 let capture={status:'ok',message:'已采集',products:[{platform:'Pinterest',site:'当前浏览器地区',productId:'1',title:'wallpaper',url:'https://www.pinterest.com/pin/1/',image:'https://i.pinimg.com/1.jpg',sales:null,likes:null,saves:100}]};
 globalThis.chrome={
- runtime:{async sendMessage(message){return message.type==='buildZip'?{ok:true,url:'blob:chrome-extension://test-extension/archive',count:1,failed:0}:{ok:true}},id:'test-extension',onMessage:{addListener:f=>onMessage=f},onStartup:{addListener(){}},onInstalled:{addListener(){}}},
+ runtime:{async sendMessage(message){if(message.type==='buildZip')zipRequests.push(message);return message.type==='buildZip'?{ok:true,url:'blob:chrome-extension://test-extension/archive',count:1,failed:0}:{ok:true}},id:'test-extension',onMessage:{addListener:f=>onMessage=f},onStartup:{addListener(){}},onInstalled:{addListener(){}}},
  storage:{local:{async get(keys){if(typeof keys==='string')return {[keys]:structuredClone(state[keys])};return Object.fromEntries(keys.map(k=>[k,structuredClone(state[k])]))},async set(data){Object.assign(state,structuredClone(data))}}},
  alarms:{onAlarm:{addListener(){}},async clear(){alarms.length=0},async create(name,options){alarms.push({name,...options})}},
  tabs:{async query(query){return query.active?[{id:1,url:'https://www.pinterest.com/'}]:[]}},
@@ -80,10 +80,10 @@ test('personal-star downloads ignore public save counts, demos and unfavorited p
   {platform:'Pinterest',productId:'unsafe',favorite:true,image:'javascript:alert(1)'}
  ]});
  assert.equal(result.ok,true);assert.equal(downloads.length,before+1);
- assert.match(downloads.at(-1).filename,/我的收藏/);assert.equal(downloads.at(-1).url,'https://i.pinimg.com/personal-a.jpg');
- assert.match(result.message,/缺少有效原图2条/);
+ assert.match(downloads.at(-1).filename,/我的收藏/);assert.match(downloads.at(-1).url,/^blob:/);assert.equal(downloads.at(-1).saveAs,false);assert.match(downloads.at(-1).filename,/\.zip$/);assert.deepEqual(zipRequests.at(-1).products.map(p=>p.image),['https://i.pinimg.com/personal-a.jpg']);
+ assert.match(result.message,/图片包包含/);
  const retry=await send('downloadFavorites',{products:[{platform:'Pinterest',productId:'a',favorite:true,image:'https://i.pinimg.com/personal-a.jpg'}]});
- assert.equal(retry.ok,true);assert.equal(downloads.length,before+1);assert.match(retry.message,/跳过 1/);
+ assert.equal(retry.ok,true);assert.equal(downloads.length,before+2);assert.match(retry.message,/ZIP/);
 });
 test('untrusted web sender cannot initiate personal-favorite downloads',async()=>{
  const before=downloads.length;
@@ -97,11 +97,13 @@ test('extension popup reads fresh stars from the open selection page, not stale 
  chrome.tabs.query=async q=>q.url?[{id:99,active:true,url:'https://zszkpt.github.io/my-project/'}]:query(q);
  chrome.scripting.executeScript=async options=>options.target.tabId===99?[{result:[{platform:'Pinterest',productId:favorite,favorite:true,image:`https://i.pinimg.com/${favorite}.jpg`}]}]:execute(options);
  try{assert.equal((await send('downloadFavoritePage')).ok,true);favorite='fresh-two';assert.equal((await send('downloadFavoritePage')).ok,true);
- assert.deepEqual(downloads.slice(before).map(x=>x.url),['https://i.pinimg.com/fresh-one.jpg','https://i.pinimg.com/fresh-two.jpg']);
+ assert.deepEqual(zipRequests.slice(-2).map(x=>x.products[0].image),['https://i.pinimg.com/fresh-one.jpg','https://i.pinimg.com/fresh-two.jpg']);assert.equal(downloads.length,before+2);
  }finally{chrome.tabs.query=query;chrome.scripting.executeScript=execute}
 });
-test('simultaneous favorite requests serialize and do not queue the same image twice',async()=>{
+test('simultaneous favorite ZIP requests allow only one archive',async()=>{
  state.downloadRecords={};const before=downloads.length;const products=[{platform:'Pinterest',productId:'concurrent',favorite:true,image:'https://i.pinimg.com/concurrent-personal.jpg'}];
  const replies=await Promise.all([send('downloadFavorites',{products}),send('downloadFavorites',{products})]);
- assert.ok(replies.every(r=>r.ok));assert.equal(downloads.length,before+1);assert.ok(replies.some(r=>/跳过 1/.test(r.message)));
+ assert.equal(replies.filter(r=>r.ok).length,1);assert.equal(downloads.length,before+1);assert.ok(replies.some(r=>/正在生成/.test(r.message)));
 });
+
+test('favorite ZIP missing permissions opens one authorization page without individual downloads',async()=>{const contains=chrome.permissions.contains,create=chrome.tabs.create,getURL=chrome.runtime.getURL;let opened;chrome.permissions.contains=async()=>false;chrome.runtime.getURL=p=>'chrome-extension://test-extension/'+p;chrome.tabs.create=async options=>{opened=options.url};const before=downloads.length;try{const result=await send('downloadFavorites',{products:[{platform:'Pinterest',productId:'permission',favorite:true,image:'https://i.pinimg.com/a.jpg'}]});assert.equal(result.ok,true);assert.match(opened,/favorite-zip.html\?job=/);assert.equal(downloads.length,before)}finally{chrome.permissions.contains=contains;chrome.tabs.create=create;chrome.runtime.getURL=getURL}});

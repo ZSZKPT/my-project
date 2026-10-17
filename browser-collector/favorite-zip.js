@@ -1,0 +1,6 @@
+'use strict';
+const jobId=new URLSearchParams(location.search).get('job'),button=document.querySelector('#start'),status=document.querySelector('#status');
+let origins=[];
+(async()=>{try{const key='favoriteZip:'+jobId,data=(await chrome.storage.local.get(key))[key];if(!data||Date.now()-data.created>3600000)throw Error('请求已过期，请返回表格重新打包');origins=[...new Set(data.products.map(p=>new URL(p.image).origin+'/*'))];status.textContent=`共 ${data.products.length} 张原图；失败项目会写入ZIP中的说明。`}catch(error){button.disabled=true;status.textContent=error.message}})();
+button.onclick=async()=>{button.disabled=true;try{const allowed=await chrome.permissions.request({origins});if(!allowed)throw Error('未允许读取图片，请点击按钮重试');status.textContent='正在后台读取图片并生成ZIP，请保持浏览器运行…';const result=await chrome.runtime.sendMessage({type:'resumeFavoriteZip',jobId});if(!result?.ok)throw Error(result?.message||'打包失败');status.textContent=result.message}catch(error){status.textContent=error.message;button.disabled=false}};
+chrome.storage.onChanged.addListener(changes=>{const p=changes.zipProgress?.newValue;if(p?.status==='building')status.textContent=`正在打包：${p.completed||0} / ${p.total||'…'}`;if(p?.status==='complete')status.textContent='ZIP下载完成，请在Chrome下载记录中查看';});

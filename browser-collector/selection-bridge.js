@@ -6,7 +6,7 @@ if(location.origin===bridgeOrigin&&location.pathname.startsWith('/my-project/'))
   const data=event.data;
   if(event.source!==window||event.origin!==bridgeOrigin)return;
   if(data?.type==='FEIFAN_FAVORITES_BRIDGE_PING'){window.postMessage({type:'FEIFAN_FAVORITES_BRIDGE_READY'},bridgeOrigin);return}
-  if(data?.type!=='FEIFAN_DOWNLOAD_FAVORITES'||typeof data.requestId!=='string')return;
+  if(data?.type!=='FEIFAN_DOWNLOAD_FAVORITES_ZIP'||typeof data.requestId!=='string')return;
   let response;
   try{response=await chrome.runtime.sendMessage({type:'downloadFavorites',products:data.products})}
   catch(error){response={ok:false,message:'扩展连接已失效，请刷新在线表格后重试：'+error.message}}

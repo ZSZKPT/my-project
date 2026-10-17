@@ -11,7 +11,7 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
   await context.addInitScript(()=>{
    if(location.origin!=='https://zszkpt.github.io')return;
    window.__favoriteCalls=[];window.chrome=window.chrome||{};
-   window.chrome.runtime={sendMessage:async message=>{window.__favoriteCalls.push(message);return {ok:true,message:`已启动 1 张下载；收藏${message.products.length}条`}}};
+   window.chrome.runtime={sendMessage:async message=>{window.__favoriteCalls.push(message);return {ok:true,message:`已启动一个ZIP下载；收藏${message.products.length}条`}}};
    const base={platform:'Pinterest',site:'US',firstSeen:'2020-01-01',url:'https://www.pinterest.com/pin/1/',notes:'keep my note'};
    localStorage.setItem('feifan-selection-v1',JSON.stringify({products:[
     {...base,productId:'fav-a',title:'personal favorite',favorite:true,image:'https://images.example.test/favorite.png'},
@@ -25,7 +25,7 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
   await page.locator('#downloadFavoritesBtn').click();assert.match(await page.locator('#toast').textContent(),/更新采集扩展/);
   await page.addScriptTag({path:path.join(root,'browser-collector/selection-bridge.js')});
   await page.waitForFunction(()=>document.querySelector('#favoriteDownloadStatus').textContent.includes('扩展已连接'));
-  await page.locator('#downloadFavoritesBtn').click();await page.waitForFunction(()=>document.querySelector('#toast').textContent.includes('已启动 1 张下载'));
+  await page.locator('#downloadFavoritesBtn').click();await page.waitForFunction(()=>document.querySelector('#toast').textContent.includes('已启动一个ZIP下载'));
   let calls=await page.evaluate(()=>window.__favoriteCalls);assert.equal(calls.length,1);assert.equal(calls[0].type,'downloadFavorites');assert.equal(calls[0].products.length,2);assert.ok(calls[0].products.every(p=>p.favorite&&!p.demo));assert.ok(calls[0].products.every(p=>p.image==='https://images.example.test/favorite.png'));
   const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('feifan-selection-v1')));assert.equal(saved.products.find(p=>p.productId==='fav-a').notes,'keep my note');
   await page.getByLabel('选择 personal favorite',{exact:true}).check();await page.locator('#downloadFavoritesBtn').click();await page.waitForFunction(()=>document.querySelector('#toast').textContent.includes('收藏1条'));
