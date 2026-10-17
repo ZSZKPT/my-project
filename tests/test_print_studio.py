@@ -145,5 +145,11 @@ class APITests(unittest.TestCase):
             with self.assertRaises(ValueError):api.secure_url(url)
         with self.assertRaises(api.APIError):api.write_result(b'<html>not an image</html>',Path('unused.png'))
 
+    def test_model_lookup_is_a_get_and_uses_no_paid_image_endpoint(self):
+        raw=json.dumps({'data':[{'id':'gpt-image-example'},{'id':'text-only'},{'id':'other-image'}]}).encode()
+        with patch('print_studio.api.request',return_value=raw) as request:
+            self.assertEqual(api.list_image_models('https://example.com/v1/images/edits','KEY'),['gpt-image-example','other-image'])
+            request.assert_called_once_with('https://example.com/v1/models',key='KEY')
+
 
 if __name__ == '__main__': unittest.main()

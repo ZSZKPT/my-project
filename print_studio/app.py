@@ -127,8 +127,11 @@ class App:
         for key, label in [('protocol', '接口协议'), ('endpoint', '完整 HTTPS 接口地址'), ('model', 'OpenAI 图像模型 ID（以账户权限为准）'), ('size', 'API 输出尺寸'), ('key', 'API Key（仅内存，不保存）')]:
             ttk.Label(api_tab, text=label).pack(anchor='w', pady=(7, 2))
             if key == 'protocol': ttk.Combobox(api_tab, textvariable=self.vars[key], values=['OpenAI兼容图像编辑', 'DashScope同步多模态'], state='readonly').pack(fill='x')
+            elif key == 'model':
+                self.model_select = ttk.Combobox(api_tab, textvariable=self.vars[key]); self.model_select.pack(fill='x')
             elif key == 'size': ttk.Combobox(api_tab, textvariable=self.vars[key], values=['1024x1024', '1536x1536', '2048x2048']).pack(fill='x')
             else: ttk.Entry(api_tab, textvariable=self.vars[key], show='*' if key == 'key' else '').pack(fill='x')
+        self.model_query_button = ttk.Button(api_tab, text='读取账户可用图像模型（不生成图片）', command=self.query_models); self.model_query_button.pack(anchor='w', pady=(8, 0))
         ttk.Label(api_tab, text='花型还原提示词').pack(anchor='w', pady=(10, 3))
         self.prompt = tk.Text(api_tab, height=7, wrap='word', relief='flat', padx=8, pady=8); self.prompt.pack(fill='both', expand=True); self.prompt.insert('1.0', DEFAULT_PROMPT)
         row = ttk.Frame(api_tab); row.pack(fill='x', pady=8)
@@ -345,6 +348,20 @@ class App:
             self.write('API配置已导入；密钥请单独填写')
         except Exception as error: messagebox.showerror('导入失败', str(error))
 
+    def query_models(self):
+        if self.busy: return
+        if self.vars['protocol'].get() != 'OpenAI兼容图像编辑':
+            return messagebox.showinfo('模型列表', '当前查询入口支持OpenAI兼容协议；其他协议请按服务商文档填写模型ID')
+        endpoint, key = self.vars['endpoint'].get().strip(), self.vars['key'].get().strip()
+        if not key: return messagebox.showinfo('模型列表', '请先在软件中填写API密钥')
+        self.model_query_button.configure(state='disabled')
+        def work():
+            try:
+                from print_studio.api import list_image_models
+                self.events.put(('models', list_image_models(endpoint, key)))
+            except Exception as error: self.events.put(('model_error', str(error)))
+        threading.Thread(target=work, daemon=True).start()
+
     def export_api(self):
         path = filedialog.asksaveasfilename(defaultextension='.json', initialfile='图像API配置.json', filetypes=[('JSON', '*.json')])
         if not path: return
@@ -445,6 +462,12 @@ class App:
                     try: self.show_image(value)
                     except Exception as error: self.write(str(error))
                 elif kind == 'task': self.task_path = Path(value); self.current_output = self.task_path.parent; self.task_text.set('任务：' + value)
+                elif kind == 'models':
+                    self.model_select.configure(values=value); self.model_query_button.configure(state='normal')
+                    self.write('账户模型：' + '、'.join(value) + '；请在API页选择所需模型')
+                    messagebox.showinfo('已读取模型列表', '请在模型下拉框选择实际可用的图像模型。\n列表可见不等于已通过图片编辑权限验证。')
+                elif kind == 'model_error':
+                    self.model_query_button.configure(state='normal'); messagebox.showerror('模型列表', value)
                 elif kind == 'done':
                     self.busy = False
                     for button in (self.start_button, self.load_button, self.resume_button): button.configure(state='normal')

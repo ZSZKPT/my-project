@@ -54,7 +54,7 @@ Linux 如缺少 Tk，需使用带 Tk 的 Python 安装。默认输出到用户�
 默认接口为 `https://api.openai.com/v1/images/edits`，使用 OpenAI API 密钥。ChatGPT 网页订阅不包含 API 用量。“ChatGPT Image 2.0”的界面名称不能直接作为 API 模型 ID；请填写账户实际支持的图像模型 ID，本版本不声称已核实具体2.0型号或进行付费实测。
 
 1. 导入模特/服装效果图，勾选“先通过 API 将效果图还原为相似花型”。
-2. 在API页填写**完整的HTTPS接口地址、实际图像模型ID、协议、输出尺寸和密钥**。可修改内置提示词。
+2. 在API页填写**完整的HTTPS接口地址、实际图像模型ID、协议、输出尺寸和密钥**。OpenAI兼容接口可点击“读取账户可用图像模型”查询名称含 image 的模型（不生成图片），再从下拉框选择；平台未开放模型列表时按文档手填。可修改内置提示词。
 3. 协议适配：
    - **OpenAI兼容图像编辑**：multipart POST，字段 `model`、`prompt`、`image`、`n=1`、`size`；识别 `data[].b64_json` 或 `data[].url`。
    - **DashScope同步多模态**：JSON POST，`input.messages[].content`包含参考图 data URL 与 text；识别 `output.choices[].message.content[].image`。输出尺寸以 `1024*1024` 形式发送。

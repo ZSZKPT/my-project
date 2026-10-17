@@ -1,7 +1,6 @@
 """Small image API adapters; credentials stay in memory and response bodies are never logged."""
 import base64
 import json
-import mimetypes
 import socket
 import time
 import urllib.error
@@ -188,3 +187,19 @@ def generate(source, target, config, key, stop=None, before_submit=None):
     else: data = download_image(result)
     write_result(data, target)
     return target
+
+
+def list_image_models(endpoint, key):
+    endpoint = secure_url(endpoint).rstrip('/')
+    if not endpoint.endswith('/images/edits'):
+        raise ValueError('自动查询适用于以 /images/edits 结尾的OpenAI兼容接口；其他接口请手动填写模型ID')
+    if not key: raise ValueError('请先填写API密钥')
+    try:
+        data = json.loads(request(endpoint[:-len('/images/edits')] + '/models', key=key))
+    except (APIError, ValueError):
+        raise APIError('读取模型列表失败，请核对密钥与平台权限；也可按服务商文档手动填写模型ID') from None
+    ids = sorted({item['id'] for item in data.get('data', [])
+                  if isinstance(item, dict) and isinstance(item.get('id'), str) and 'image' in item['id'].lower()})
+    if not ids:
+        raise APIError('模型列表未返回含image名称的模型；不代表没有图像权限，可按服务商文档手动填写ID')
+    return ids
