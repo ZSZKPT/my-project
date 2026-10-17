@@ -68,3 +68,40 @@ test('review thresholds and same-link multicolor gate combine without treating u
  const either=await send('likePreview',{criteria:{likes:100,reviews:100,colors:'multiple',operator:'or'}});assert.match(either.message,/1 张可下载/);
  assert.equal((await send('likePreview',{criteria:{colors:'not-a-mode',operator:'and'}})).ok,false);
 });
+
+test('personal-star downloads ignore public save counts, demos and unfavorited products; duplicate image URLs collapse',async()=>{
+ state.downloadRecords={};const before=downloads.length;
+ const result=await send('downloadFavorites',{products:[
+  {platform:'Pinterest',productId:'favorite-a',favorite:true,image:'https://i.pinimg.com/personal-a.jpg',saves:0},
+  {platform:'Pinterest',productId:'favorite-copy',favorite:true,image:'https://i.pinimg.com/personal-a.jpg'},
+  {platform:'Pinterest',productId:'not-favorite',favorite:false,image:'https://i.pinimg.com/public-high.jpg',saves:999999},
+  {platform:'Pinterest',productId:'demo',favorite:true,demo:true,image:'https://i.pinimg.com/demo.jpg'},
+  {platform:'Pinterest',productId:'missing',favorite:true,image:''},
+  {platform:'Pinterest',productId:'unsafe',favorite:true,image:'javascript:alert(1)'}
+ ]});
+ assert.equal(result.ok,true);assert.equal(downloads.length,before+1);
+ assert.match(downloads.at(-1).filename,/我的收藏/);assert.equal(downloads.at(-1).url,'https://i.pinimg.com/personal-a.jpg');
+ assert.match(result.message,/缺少有效原图2条/);
+ const retry=await send('downloadFavorites',{products:[{platform:'Pinterest',productId:'a',favorite:true,image:'https://i.pinimg.com/personal-a.jpg'}]});
+ assert.equal(retry.ok,true);assert.equal(downloads.length,before+1);assert.match(retry.message,/跳过 1/);
+});
+test('untrusted web sender cannot initiate personal-favorite downloads',async()=>{
+ const before=downloads.length;
+ const result=await new Promise(resolve=>onMessage({type:'downloadFavorites',products:[{platform:'Pinterest',productId:'x',favorite:true,image:'https://i.pinimg.com/x.jpg'}]},
+  {id:'test-extension',tab:{id:10},url:'https://untrusted.example/'},resolve));
+ assert.equal(result.ok,false);assert.equal(downloads.length,before);
+});
+
+test('extension popup reads fresh stars from the open selection page, not stale captured products',async()=>{
+ const query=chrome.tabs.query,execute=chrome.scripting.executeScript;let favorite='fresh-one';state.downloadRecords={};const before=downloads.length;
+ chrome.tabs.query=async q=>q.url?[{id:99,active:true,url:'https://zszkpt.github.io/my-project/'}]:query(q);
+ chrome.scripting.executeScript=async options=>options.target.tabId===99?[{result:[{platform:'Pinterest',productId:favorite,favorite:true,image:`https://i.pinimg.com/${favorite}.jpg`}]}]:execute(options);
+ try{assert.equal((await send('downloadFavoritePage')).ok,true);favorite='fresh-two';assert.equal((await send('downloadFavoritePage')).ok,true);
+ assert.deepEqual(downloads.slice(before).map(x=>x.url),['https://i.pinimg.com/fresh-one.jpg','https://i.pinimg.com/fresh-two.jpg']);
+ }finally{chrome.tabs.query=query;chrome.scripting.executeScript=execute}
+});
+test('simultaneous favorite requests serialize and do not queue the same image twice',async()=>{
+ state.downloadRecords={};const before=downloads.length;const products=[{platform:'Pinterest',productId:'concurrent',favorite:true,image:'https://i.pinimg.com/concurrent-personal.jpg'}];
+ const replies=await Promise.all([send('downloadFavorites',{products}),send('downloadFavorites',{products})]);
+ assert.ok(replies.every(r=>r.ok));assert.equal(downloads.length,before+1);assert.ok(replies.some(r=>/跳过 1/.test(r.message)));
+});

@@ -15,6 +15,7 @@ jobs:
         with:
           node-version: '24'
       - run: |
+          node --check browser-collector/selection-bridge.js
           node --check browser-collector/background.js
           node --check browser-collector/extract.js
           node --check browser-collector/pagination.js

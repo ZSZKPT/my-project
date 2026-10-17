@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "飞凡选款 · 浏览器采集",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "使用当前 Chrome 的正常登录状态采集选款参考；Pinterest 仅从你的首页推荐读取。",
   "permissions": [
     "activeTab",
@@ -29,5 +29,16 @@
     "default_popup": "popup.html",
     "default_title": "飞凡选款采集"
   },
-  "minimum_chrome_version": "120"
+  "minimum_chrome_version": "120",
+  "content_scripts": [
+    {
+      "matches": [
+        "https://zszkpt.github.io/my-project/*"
+      ],
+      "js": [
+        "selection-bridge.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
 }

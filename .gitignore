@@ -11,3 +11,6 @@ selection-crawler/node_modules/
 
 !selection/data/
 !selection/data/latest.json
+
+/selection/FeifanBrowserCollector.zip
+/selection/collector-build.json

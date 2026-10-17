@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['selection/**', '.github/workflows/selection-web.yml']
+    paths: ['selection/**', 'browser-collector/**', 'scripts/package_browser_collector.py', '.github/workflows/selection-web.yml']
 permissions:
   contents: read
 jobs:
@@ -24,6 +24,9 @@ jobs:
           PY
           node --check /tmp/selection.js
           node --check selection/sync.js
+          node --check selection/favorite-downloads.js
+      - name: Bundle downloadable collector extension
+        run: python3 scripts/package_browser_collector.py
       - uses: actions/upload-artifact@v4
         with:
           name: Feifan-Selection-Web
