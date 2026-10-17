@@ -91,8 +91,8 @@ class JobTests(unittest.TestCase):
                 self.assertEqual(job.state['items'][0]['status'],'complete')
                 Job(job.path).run('TEST-KEY',max_new_requests=1)
                 self.assertEqual(request.call_count,2)
-            self.assertNotIn('NEVER-SAVE-THIS',job.path.read_text())
-            self.assertNotIn('TEST-KEY',job.path.read_text())
+            self.assertNotIn('NEVER-SAVE-THIS',job.path.read_text(encoding='utf-8'))
+            self.assertNotIn('TEST-KEY',job.path.read_text(encoding='utf-8'))
             self.assertEqual(Job(job.path).state['api_submissions'],2)
 
     def test_template_snapshot_modification_stops_render(self):
@@ -118,7 +118,7 @@ class APITests(unittest.TestCase):
                     if protocol=='dashscope':self.assertIn('data:image/png;base64,',json.loads(args[1])['input']['messages'][0]['content'][0]['image'])
                     else:self.assertIn(b'name="image"',args[1]);self.assertIn(b'name="n"',args[1])
                 self.assertEqual(load_image(target).size,(24,24))
-                self.assertNotIn('PRIVATE-KEY',target.with_suffix('.request.json').read_text())
+                self.assertNotIn('PRIVATE-KEY',target.with_suffix('.request.json').read_text(encoding='utf-8'))
 
     def test_download_failure_reuses_saved_result_without_resubmission(self):
         with tempfile.TemporaryDirectory() as directory:
