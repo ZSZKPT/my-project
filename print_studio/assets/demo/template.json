@@ -1,0 +1,7 @@
+{
+  "name": "示例 · 平铺T恤（非生产版型）",
+  "mode": "full_repeat",
+  "base": "base.png",
+  "mask": "mask.png",
+  "canvas_width_cm": 70
+}
