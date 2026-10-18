@@ -1,0 +1,171 @@
+{
+  "tile_cm": 35,
+  "outputs": [
+    {
+      "kind": "mockup",
+      "name": "前",
+      "size": [
+        1350,
+        1800
+      ],
+      "source_dpi": null,
+      "sha256": "642864c7b5f6d9107f7b4e68acf0dd1492345a2b85a4f990832fd06d61fe8da7",
+      "output_bytes": 2652426,
+      "outside_mask_unchanged": true,
+      "source_template": "mockups/前/template.json"
+    },
+    {
+      "kind": "mockup",
+      "name": "前1",
+      "size": [
+        1350,
+        1800
+      ],
+      "source_dpi": null,
+      "sha256": "3214fdab8f1261992203bc3327eb18734741c736f35228feb56174b3071352e8",
+      "output_bytes": 3215295,
+      "outside_mask_unchanged": true,
+      "source_template": "mockups/前1/template.json"
+    },
+    {
+      "kind": "mockup",
+      "name": "后",
+      "size": [
+        1350,
+        1800
+      ],
+      "source_dpi": null,
+      "sha256": "485a0287cf9c8b50d56f1a3f9ec300a73bf270be680ef6de9337be016b63dd2a",
+      "output_bytes": 4257064,
+      "outside_mask_unchanged": true,
+      "source_template": "mockups/后/template.json"
+    },
+    {
+      "kind": "mockup",
+      "name": "细节1",
+      "size": [
+        1350,
+        1800
+      ],
+      "source_dpi": null,
+      "sha256": "f652ceda033bb8475c05588083d867d8a853bd194035525006c825703dbe8d6a",
+      "output_bytes": 4840615,
+      "outside_mask_unchanged": true,
+      "source_template": "mockups/细节1/template.json"
+    },
+    {
+      "kind": "mockup",
+      "name": "细节2",
+      "size": [
+        1350,
+        1350
+      ],
+      "source_dpi": null,
+      "sha256": "fbe6c6e21b2e24baf847fd1afedea35de2bd10d12ef6db537e18a4fd68b28ffc",
+      "output_bytes": 4432724,
+      "outside_mask_unchanged": true,
+      "source_template": "mockups/细节2/template.json"
+    },
+    {
+      "kind": "cutting",
+      "name": "S",
+      "size": [
+        6842,
+        4121
+      ],
+      "source_dpi": [
+        110.0,
+        110.0
+      ],
+      "sha256": "33acbaff3d594b37cd60761a5ac2856f954237f8f22155396efab37fe6a286f6",
+      "output_bytes": 36114403,
+      "outside_mask_unchanged": true,
+      "source_template": "cutting/S/template.json",
+      "actual_png_dpi": [
+        110.00739999999999,
+        110.00739999999999
+      ]
+    },
+    {
+      "kind": "cutting",
+      "name": "M",
+      "size": [
+        6843,
+        4371
+      ],
+      "source_dpi": [
+        110.0,
+        110.0
+      ],
+      "sha256": "4b07fd5dcbb3382465d727b649136822cba33ac60cc0488fa655bcf6b3e8ce69",
+      "output_bytes": 37205302,
+      "outside_mask_unchanged": true,
+      "source_template": "cutting/M/template.json",
+      "actual_png_dpi": [
+        110.00739999999999,
+        110.00739999999999
+      ]
+    },
+    {
+      "kind": "cutting",
+      "name": "L",
+      "size": [
+        6866,
+        4542
+      ],
+      "source_dpi": [
+        110.0,
+        110.0
+      ],
+      "sha256": "c424467ed087ffeaf46ebf156b111bba98983796150fa3cc198d219ec58b7583",
+      "output_bytes": 36190265,
+      "outside_mask_unchanged": true,
+      "source_template": "cutting/L/template.json",
+      "actual_png_dpi": [
+        110.00739999999999,
+        110.00739999999999
+      ]
+    },
+    {
+      "kind": "cutting",
+      "name": "XL",
+      "size": [
+        6843,
+        5002
+      ],
+      "source_dpi": [
+        110.0,
+        110.0
+      ],
+      "sha256": "e62c3e9d186feeec10b0f4c96df1a853b6df86224b99cbb1b6c215c6802f87a3",
+      "output_bytes": 44591152,
+      "outside_mask_unchanged": true,
+      "source_template": "cutting/XL/template.json",
+      "actual_png_dpi": [
+        110.00739999999999,
+        110.00739999999999
+      ]
+    },
+    {
+      "kind": "cutting",
+      "name": "2XL",
+      "size": [
+        6874,
+        5156
+      ],
+      "source_dpi": [
+        110.0,
+        110.0
+      ],
+      "sha256": "c7e537bee8b6e63af0bd36f3aa4d813e02b8dbb1e70eb48c635b8771e4c77986",
+      "output_bytes": 45602585,
+      "outside_mask_unchanged": true,
+      "source_template": "cutting/2XL/template.json",
+      "actual_png_dpi": [
+        110.00739999999999,
+        110.00739999999999
+      ]
+    }
+  ],
+  "notice": "工厂未确认生产版；照片为二维套版，裁片DPI沿用原文件。"
+}
