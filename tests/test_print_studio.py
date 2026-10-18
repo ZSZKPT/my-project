@@ -152,4 +152,85 @@ class APITests(unittest.TestCase):
             request.assert_called_once_with('https://example.com/v1/models',key='KEY')
 
 
+class WholeGarmentTests(unittest.TestCase):
+    def sample_zip(self, root, name='YQ-TJDXTZ-67-S.jpg'):
+        from PIL import ImageDraw
+        from zipfile import ZipFile
+        image=Image.new('RGB',(600,400),'white');draw=ImageDraw.Draw(image)
+        draw.rectangle((20,20,240,300),fill='#121b41',outline='black',width=2)
+        draw.rectangle((280,30,480,290),fill='white',outline='#333333',width=2)
+        draw.rectangle((50,90,200,120),fill='white');draw.rectangle((320,60,350,260),fill='#131b40')
+        draw.rectangle((510,320,550,340),fill='#dd2222')
+        payload=io.BytesIO();image.save(payload,'JPEG',quality=98,dpi=(110,110))
+        archive=root/'source.zip'
+        with ZipFile(archive,'w') as z:
+            z.writestr('YQ-TJDXTZ-67/'+name,payload.getvalue());z.writestr('YQ-TJDXTZ-67/Thumbs.db',b'ignored')
+        return archive
+
+    def test_cutting_zip_requires_review_and_keeps_pixel_size_dpi_and_marks(self):
+        from print_studio.templates import import_zip,approve,update
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);archive=self.sample_zip(root);before=archive.read_bytes()
+            path=import_zip(archive,root/'templates','cutting')[0]
+            spec=template(path,allow_draft=True);self.assertEqual(spec['source_dpi'],[110,110]);self.assertEqual(spec['size'],'S')
+            self.assertEqual(len(spec['pieces']),2)
+            with self.assertRaises(ValueError):template(path)
+            approve(path);spec=template(path)
+            original=load_image(spec['base']);rendered=mockup(Image.new('RGB',(5,5),'#12ab34'),spec,options(shade=True))
+            self.assertEqual(rendered.size,original.size)
+            for point in [(60,100),(330,100)]:self.assertEqual(rendered.getpixel(point),(18,171,52))
+            for point in [(0,0),(530,330)]:self.assertEqual(rendered.getpixel(point),original.getpixel(point))
+            target=root/'pattern.png';Image.new('RGB',(5,5),'#12ab34').save(target)
+            outputs=render(target,root/'output',options(),[spec])
+            cutting=next(p for p in outputs if p.name.startswith('裁片_'))
+            with Image.open(cutting) as image:
+                self.assertEqual(image.size,(600,400));self.assertAlmostEqual(image.info['dpi'][0],110,delta=.02)
+            self.assertEqual(archive.read_bytes(),before)
+            update(path,canvas_width_cm=123)
+            with self.assertRaises(ValueError):template(path)
+
+    def test_overlapping_piece_boxes_do_not_overwrite_other_component_orientation(self):
+        from print_studio.templates import piece_mask
+        from PIL import ImageDraw
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);base=Image.new('RGB',(12,12),'white');base.save(root/'base.png')
+            mask=Image.new('L',(12,12));draw=ImageDraw.Draw(mask)
+            draw.rectangle((1,1,7,2),fill=255);draw.rectangle((1,1,2,7),fill=255);draw.rectangle((4,4,9,9),fill=255);mask.save(root/'mask.png')
+            pieces=[{'box':[1,1,8,8],'seed':[1,1],'rotation':0},{'box':[4,4,10,10],'seed':[4,4],'rotation':180}]
+            tile=Image.new('RGB',(2,1));tile.putdata([(255,0,0),(0,0,255)])
+            spec={'base':root/'base.png','mask':root/'mask.png','canvas_width_cm':12,'kind':'cutting','pieces':pieces}
+            result=mockup(tile,spec,options(tile_cm=2))
+            self.assertEqual(result.getpixel((1,1)),(255,0,0));self.assertEqual(result.getpixel((4,4)),(0,0,255));self.assertEqual(result.getpixel((11,11)),(255,255,255))
+
+    def test_mockup_import_is_a_blank_draft_and_cover_mode_removes_old_luminance(self):
+        from print_studio.templates import import_zip,approve,update
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);path=import_zip(self.sample_zip(root),root/'templates','mockup')[0]
+            spec=template(path,allow_draft=True)
+            with Image.open(spec['mask']) as mask:self.assertIsNone(mask.getbbox())
+            with self.assertRaises(ValueError):approve(path)
+            Image.new('L',(600,400),255).save(spec['mask']);approve(path)
+            image=mockup(Image.new('RGB',(1,1),'#12ab34'),template(path),options())
+            self.assertEqual(image.getpixel((60,100)),image.getpixel((80,80)))
+
+    def test_task_snapshot_preserves_cutting_fields_and_review(self):
+        from print_studio.templates import import_zip,approve
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);path=import_zip(self.sample_zip(root),root/'templates','cutting')[0];approve(path)
+            job=Job.create([ASSETS/'geometric.png'],root/'out',options(),[path]);snap=job.specs()[0]
+            self.assertEqual(snap['kind'],'cutting');self.assertEqual(snap['source_dpi'],[110,110]);self.assertEqual(len(snap['pieces']),2)
+            job.run();item=job.state['items'][0]
+            self.assertTrue(any(Path(p).name.startswith('裁片_') for p in item['files']))
+            with patch('print_studio.jobs.render',side_effect=AssertionError('must reuse outputs')):Job(job.path).run()
+
+    def test_zip_path_traversal_is_rejected(self):
+        from zipfile import ZipFile
+        from print_studio.templates import import_zip
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);path=root/'evil.zip'
+            with ZipFile(path,'w') as z:z.writestr('../outside.png',png_bytes())
+            with self.assertRaises(ValueError):import_zip(path,root/'templates')
+            self.assertFalse((root/'outside.png').exists())
+
+
 if __name__ == '__main__': unittest.main()

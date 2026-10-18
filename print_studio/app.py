@@ -20,7 +20,7 @@ ASSETS = Path(getattr(sys, '_MEIPASS', Path(__file__).resolve().parent)) / 'asse
 
 class App:
     def __init__(self, root):
-        self.root = root; root.title('飞凡印花设计 · 满版循环'); root.geometry('1240x860'); root.minsize(1000, 700)
+        self.root = root; root.title('飞凡印花设计 · 满版循环'); root.geometry(f'{min(1240,max(1000,root.winfo_screenwidth()-60))}x{min(860,max(650,root.winfo_screenheight()-90))}'); root.minsize(1000, 650)
         self.files = []; self.templates = []; self.task_path = None; self.busy = False
         self.events = queue.Queue(); self.stop = threading.Event(); self.current_output = None; self.preview_window = None
         self.vars = {k: tk.StringVar(value=v) for k, v in {
@@ -120,7 +120,13 @@ class App:
         ttk.Button(row, text='导入模板 JSON', command=self.import_template).pack(side='left', padx=6)
         ttk.Button(row, text='绘制服装蒙版', command=self.draw_mask).pack(side='left', padx=6)
         ttk.Button(row, text='移除选中', command=self.remove_template).pack(side='left')
-        ttk.Label(templates_tab, text='示例模板是平铺T恤示意图，用于验证流程。真实模特套版请导入你自己的底图与服装蒙版。\n模板整张底图对应宽度用于计算花型比例；可反复调整，效果图比例仍需人工确认。', wraplength=680).pack(anchor='w')
+        row = ttk.Frame(templates_tab); row.pack(fill='x', pady=(0,10))
+        ttk.Button(row, text='导入效果图ZIP', command=lambda:self.import_template_zip('mockup')).pack(side='left')
+        ttk.Button(row, text='导入裁片ZIP', command=lambda:self.import_template_zip('cutting')).pack(side='left',padx=5)
+        ttk.Button(row, text='编辑选中蒙版', command=self.edit_template_mask).pack(side='left')
+        ttk.Button(row, text='核对模板 / 裁片方向', command=self.review_template).pack(side='left',padx=5)
+        self.template_list.bind('<Double-1>',lambda e:self.review_template())
+        ttk.Label(templates_tab, text='支持整件满版换花：效果图先绘制服装蒙版；白底裁片ZIP可生成蒙版草稿。\n逐尺码保留原尺寸/DPI和排版；每个模板核对后才能开始。已印花底图默认不继承旧字母和条纹明暗。', wraplength=680).pack(anchor='w')
         api_tab = ttk.Frame(tabs, padding=18); tabs.add(api_tab, text='API 花型还原')
         ttk.Label(api_tab, text='接入服务商的图像编辑接口', font=('', 15, 'bold')).pack(anchor='w')
         ttk.Label(api_tab, text='默认接入 OpenAI 图像编辑 API。模型 ID 以账户可用列表为准；ChatGPT 网页订阅与 API 分别计费。', wraplength=680).pack(anchor='w', pady=8)
@@ -238,7 +244,12 @@ class App:
     def refresh_templates(self):
         self.template_list.delete(0, 'end')
         for path in self.templates:
-            try: self.template_list.insert('end', template(path)['name'])
+            try:
+                spec=template(path,allow_draft=True)
+                from print_studio.templates import is_reviewed
+                ready=is_reviewed(path,spec['config'])
+                label=('裁片' if spec['kind']=='cutting' else '效果')+' · '+spec['name']+(' ✓可用' if ready else ' · 待核对')
+                self.template_list.insert('end',label)
             except Exception: self.template_list.insert('end', '模板不可用：' + str(path))
 
     def import_template(self):
@@ -246,7 +257,7 @@ class App:
         path = filedialog.askopenfilename(title='选择套版模板JSON', filetypes=[('套版模板', '*.json')])
         if not path: return
         try:
-            template(path)
+            template(path,allow_draft=True)
             if Path(path) not in self.templates: self.templates.append(Path(path))
             self.refresh_templates()
         except Exception as error: messagebox.showerror('模板错误', str(error))
@@ -255,6 +266,95 @@ class App:
         if self.busy: return
         selected = self.template_list.curselection()
         if selected: self.templates.pop(selected[0]); self.refresh_templates()
+
+    def selected_template(self):
+        selected=self.template_list.curselection()
+        if not selected:raise ValueError('请先选中一个套版模板')
+        return Path(self.templates[selected[0]])
+
+    def editable_template(self,path):
+        if self.task_path and path.resolve().is_relative_to((self.task_path.parent/'templates').resolve()):
+            raise ValueError('任务快照用于断点续作，不在这里修改。请导入原模板库中的JSON，修改后新建任务。')
+
+    def import_template_zip(self,kind):
+        if self.busy:return
+        path=filedialog.askopenfilename(title='选择裁片ZIP' if kind=='cutting' else '选择效果图ZIP',filetypes=[('ZIP','*.zip')])
+        if not path:return
+        destination=filedialog.askdirectory(title='选择模板库保存目录；会创建新文件夹，不改动原ZIP')
+        if not destination:return
+        self.busy=True;self.stop.clear()
+        for button in (self.start_button,self.load_button,self.resume_button):button.configure(state='disabled')
+        self.status.set('正在导入模板；裁片识别结果为草稿，需人工核对')
+        def work():
+            try:
+                from print_studio.templates import import_zip
+                paths=import_zip(path,destination,kind,self.stop)
+                self.events.put(('templates',paths))
+                self.events.put(('status','模板已导入：编辑蒙版，再核对模板与裁片方向'))
+            except Exception as error:self.events.put(('log','模板导入停止：'+str(error)));self.events.put(('status','模板导入未完成，可检查模板保存目录'))
+            finally:self.events.put(('done',None))
+        threading.Thread(target=work,daemon=True).start()
+
+    def edit_template_mask(self):
+        if self.busy:return
+        try:
+            path=self.selected_template();self.editable_template(path);spec=template(path,allow_draft=True)
+            from print_studio.mask_editor import MaskEditor
+            from print_studio.templates import update,components
+            if getattr(self,'mask_editor',None) and self.mask_editor.window.winfo_exists():self.mask_editor.close()
+            def saved():
+                changes={'review_required':True}
+                if spec['kind']=='cutting':
+                    with Image.open(spec['mask']) as mask:
+                        _,parts=components(mask,minimum=max(20,round(mask.width*mask.height*.0001)),with_seeds=True)
+                    changes['pieces']=[{'name':f'裁片{i:02d}',**item,'rotation':0} for i,item in enumerate(parts,1)]
+                update(path,**changes);self.refresh_templates()
+                self.write('蒙版已保存，裁片方向需重新核对：'+str(path))
+            self.mask_editor=MaskEditor(self.root,spec['base'],spec['mask'],saved)
+        except Exception as error:messagebox.showerror('无法编辑',str(error))
+
+    def review_template(self):
+        if self.busy:return
+        try:
+            path=self.selected_template();self.editable_template(path);spec=template(path,allow_draft=True)
+            from print_studio.templates import overlay,update,approve
+            if getattr(self,'template_window',None) and self.template_window.winfo_exists():self.template_window.destroy()
+            window=tk.Toplevel(self.root);self.template_window=window;window.title('核对整件满版模板：'+spec['name']);window.geometry(f'{min(1080,max(950,self.root.winfo_screenwidth()-60))}x{min(820,max(650,self.root.winfo_screenheight()-90))}')
+            head=ttk.Frame(window,padding=10);head.pack(fill='x')
+            ttk.Label(head,text='红色区域将完全替换旧字母、底色和条纹；黑白蒙版外保持原图。').pack(anchor='w')
+            if spec['kind']=='cutting':
+                with Image.open(spec['base']) as base:dimensions=base.size
+                ttk.Label(head,text=f'裁片：{dimensions[0]}×{dimensions[1]} 像素；原DPI：{spec["source_dpi"]}；尺码：{spec["size"]}。请与工厂核实物理尺寸。').pack(anchor='w')
+            else:ttk.Label(head,text='效果图需要覆盖上衣、领口、袖口和短裤；皮肤、头发、饰品、背景应排除。').pack(anchor='w')
+            image=overlay(path,limit=(min(1000,self.root.winfo_screenwidth()-100),min(430,max(300,self.root.winfo_screenheight()-350))));window.photo=ImageTk.PhotoImage(image)
+            tk.Label(window,image=window.photo,bg='#dce6eb').pack(fill='both',expand=True)
+            controls=ttk.Frame(window,padding=10);controls.pack(fill='x')
+            width=tk.StringVar(value=str(spec['canvas_width_cm']));shade=tk.BooleanVar(value=spec['shade_mode']=='base')
+            if spec['kind']=='mockup':
+                ttk.Label(controls,text='整张底图对应宽度/cm').pack(side='left');ttk.Entry(controls,textvariable=width,width=10).pack(side='left',padx=5)
+                ttk.Checkbutton(controls,text='保留明暗（仅干净底图，旧印花底图不要勾选）',variable=shade).pack(side='left')
+            pieces=json.loads(json.dumps(spec['pieces']));rotation=tk.StringVar(value='0')
+            if pieces:
+                ttk.Label(controls,text='裁片编号').pack(side='left')
+                chosen=ttk.Combobox(controls,state='readonly',values=[f'{i+1}: {p["name"]}' for i,p in enumerate(pieces)],width=15);chosen.pack(side='left',padx=5);chosen.current(0)
+                ttk.Label(controls,text='花型旋转/度').pack(side='left');direction=ttk.Combobox(controls,textvariable=rotation,state='readonly',values=['0','90','180','270'],width=6);direction.pack(side='left',padx=5)
+                def selected(event=None):rotation.set(str(pieces[chosen.current()].get('rotation',0)))
+                def rotated(event=None):pieces[chosen.current()]['rotation']=int(rotation.get())
+                chosen.bind('<<ComboboxSelected>>',selected);direction.bind('<<ComboboxSelected>>',rotated);selected()
+            approved=tk.BooleanVar(value=False)
+            ttk.Checkbutton(window,text='我已核对蒙版、轮廓/标记、裁片分区和方向；裁片DPI与实际尺寸已确认。',variable=approved).pack(anchor='w',padx=12,pady=6)
+            row=ttk.Frame(window,padding=10);row.pack(fill='x')
+            def save():
+                if not approved.get():return messagebox.showinfo('需要核对','请先核对模板并勾选确认',parent=window)
+                try:
+                    changes={'pieces':pieces,'review_required':True}
+                    if spec['kind']=='mockup':changes.update(canvas_width_cm=number(width.get(),'底图宽度/cm',1,500),shade_mode='base' if shade.get() else 'none')
+                    update(path,**changes);approve(path);template(path)
+                    self.refresh_templates();self.write('模板已核对：'+spec['name']);window.destroy()
+                except Exception as error:messagebox.showerror('确认失败',str(error),parent=window)
+            ttk.Button(row,text='核对通过并保存',style='Accent.TButton',command=save).pack(side='right')
+            ttk.Label(row,text='需要修边或分离相邻裁片时，请先“编辑选中蒙版”，再回来确认。').pack(side='left')
+        except Exception as error:messagebox.showerror('无法核对',str(error))
 
     def create_template(self):
         if self.busy: return
@@ -462,6 +562,8 @@ class App:
                     try: self.show_image(value)
                     except Exception as error: self.write(str(error))
                 elif kind == 'task': self.task_path = Path(value); self.current_output = self.task_path.parent; self.task_text.set('任务：' + value)
+                elif kind == 'templates':
+                    self.templates.extend(Path(p) for p in value);self.refresh_templates();self.write(f'导入{len(value)}个模板，尚未核对的模板不会用于批量出图')
                 elif kind == 'models':
                     self.model_select.configure(values=value); self.model_query_button.configure(state='normal')
                     self.write('账户模型：' + '、'.join(value) + '；请在API页选择所需模型')

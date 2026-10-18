@@ -23,6 +23,24 @@ def main():
             app.show_image(ASSETS / 'demo' / 'geometric.png'); root.update()
             assert app.preview_window is None
             app.set_files([ASSETS / 'demo' / 'geometric.png']); root.update()
+            from zipfile import ZipFile
+            from io import BytesIO
+            from PIL import Image, ImageDraw
+            from print_studio.templates import import_zip, approve
+            sample=Image.new('RGB',(500,400),'white'); draw=ImageDraw.Draw(sample)
+            draw.rectangle((20,20,200,360),fill='#112040',outline='black'); draw.rectangle((260,30,460,350),fill='white',outline='black',width=2)
+            stream=BytesIO(); sample.save(stream,'JPEG',dpi=(110,110))
+            archive=Path(directory)/'panels.zip'
+            with ZipFile(archive,'w') as z:z.writestr('TEST-S.jpg',stream.getvalue())
+            paths=import_zip(archive,Path(directory)/'library','cutting'); approve(paths[0])
+            app.templates=paths;app.refresh_templates();app.template_list.selection_set(0)
+            app.review_template();root.update();assert app.template_window.winfo_exists();app.template_window.destroy()
+            app.edit_template_mask();root.update();assert app.mask_editor.window.winfo_exists()
+            from types import SimpleNamespace
+            app.mask_editor.press(SimpleNamespace(x=40,y=40));app.mask_editor.release();app.mask_editor.undo();root.update();app.mask_editor.close()
+            cut_job=Job.create([ASSETS/'demo'/'geometric.png'],directory,options,paths);cut_job.run()
+            assert any(p.name.startswith('裁片_') for p in (cut_job.root/cut_job.state['items'][0]['id']).glob('*.png'))
+
         root.destroy(); return
     root.mainloop()
 

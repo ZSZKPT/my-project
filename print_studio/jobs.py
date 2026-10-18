@@ -86,8 +86,13 @@ class Job:
             for i, config in enumerate(configs, 1):
                 folder = root / 'templates' / str(i); folder.mkdir()
                 for key in ('base', 'mask'): shutil.copyfile(config[key], folder / (key + '.png')) if config[key].suffix.lower() == '.png' else load_image(config[key]).save(folder / (key + '.png'))
-                spec = {'name': config['name'], 'mode': 'full_repeat', 'base': 'base.png', 'mask': 'mask.png', 'canvas_width_cm': config['canvas_width_cm']}
+                spec = dict(config.get('config', {}))
+                spec.update({'name': config['name'], 'mode': 'full_repeat', 'base': 'base.png', 'mask': 'mask.png', 'canvas_width_cm': config['canvas_width_cm']})
+                spec.pop('approval',None)
                 atomic_json(folder / 'template.json', spec)
+                if spec.get('review_required'):
+                    from print_studio.templates import approve
+                    approve(folder/'template.json')
                 saved_templates.append({'path': (folder / 'template.json').relative_to(root).as_posix(),
                                         'base_sha256': sha256(folder / 'base.png'), 'mask_sha256': sha256(folder / 'mask.png'),
                                         'config_sha256': sha256(folder / 'template.json')})
@@ -164,7 +169,7 @@ class Job:
                     outputs = render(tile, folder, self.state['settings'], specs)
                     item['files'] = {p.relative_to(self.root).as_posix(): sha256(p) for p in outputs}
                     item['status'] = 'complete'; self.save()
-                    self.emit('image', str(folder / ('套版效果_01.png' if specs else '平铺检查_2x2.png')))
+                    self.emit('image', str(next((p for p in outputs if p.name.startswith('套版效果_')),next((p for p in outputs if p.name.startswith('裁片_')),folder/'平铺检查_2x2.png'))))
                     self.emit('log', '完成：' + item['name'])
                     self.emit('progress', (index + 1) / len(self.state['items']) * 100)
                 self.state['status'] = 'complete'; self.save()

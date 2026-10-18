@@ -82,7 +82,8 @@ def save_png(image, path, dpi=None):
     path = Path(path)
     temp = path.with_name('.' + uuid.uuid4().hex + '.png')
     try:
-        image.save(temp, format='PNG', **({'dpi': (dpi, dpi)} if dpi else {}))
+        density = tuple(dpi) if isinstance(dpi, (list, tuple)) else (dpi, dpi)
+        image.save(temp, format='PNG', **({'dpi': density} if dpi else {}))
         os.replace(temp, path)
     finally:
         temp.unlink(missing_ok=True)
@@ -130,7 +131,7 @@ def seam_report(tile):
             'note': '仅为边缘色差参考，不是无缝合格证明；请查看2×2平铺图。'}
 
 
-def template(path):
+def template(path, allow_draft=False):
     path = Path(path).resolve()
     config = json.loads(path.read_text(encoding='utf-8'))
     if config.get('mode', 'full_repeat') != 'full_repeat':
@@ -148,11 +149,27 @@ def template(path):
             raise ValueError('蒙版尺寸必须与底图完全相同')
         if 'A' in m.getbands():
             raise ValueError('蒙版请保存为无透明通道的灰度PNG：白色印花，黑色保留')
-        if not m.convert('L').getbbox():
+        if not allow_draft and not m.convert('L').getbbox():
             raise ValueError('蒙版全黑，没有可印花区域')
+    kind = config.get('kind', 'mockup')
+    if kind not in ('mockup', 'cutting'): raise ValueError('未知模板类型')
+    from print_studio.templates import is_reviewed
+    if not allow_draft and not is_reviewed(path, config):
+        raise ValueError('模板尚未核对或核对后被修改：' + str(config.get('name', path.parent.name)) + '；请在模板页检查蒙版和方向后确认')
+    if kind == 'cutting':
+        dpi = config.get('source_dpi', [])
+        if len(dpi) != 2 or any(not math.isfinite(float(v)) or not 36 <= float(v) <= 600 for v in dpi):
+            raise ValueError('裁片模板必须提供确认的原图DPI')
+    for piece in config.get('pieces', []):
+        box = piece.get('box', [])
+        if len(box) != 4 or not all(isinstance(v, int) for v in box) or not (0 <= box[0] < box[2] <= b.width and 0 <= box[1] < box[3] <= b.height):
+            raise ValueError('裁片区域坐标超出底图')
+        if piece.get('rotation',0) not in (0,90,180,270): raise ValueError('裁片方向需为0/90/180/270度')
     width_cm = number(config.get('canvas_width_cm', 60), '模板整张底图对应宽度/cm', 1, 500)
     return {'name': str(config.get('name', path.parent.name)), 'path': str(path),
-            'base': base, 'mask': mask, 'canvas_width_cm': width_cm}
+            'base': base, 'mask': mask, 'canvas_width_cm': width_cm, 'kind':kind,
+            'source_dpi':config.get('source_dpi'), 'size':config.get('size',''),
+            'shade_mode':config.get('shade_mode','base'), 'pieces':config.get('pieces', []), 'config':config}
 
 
 def mockup(tile, spec, options):
@@ -160,9 +177,25 @@ def mockup(tile, spec, options):
     with Image.open(spec['mask']) as source:
         mask = ImageOps.exif_transpose(source).convert('L')
     factor = base.width / spec['canvas_width_cm']
+    if spec.get('kind') == 'cutting':
+        # Cutting renders never inherit old text/stripe luminance.
+        pieces = spec.get('pieces') or [{'box':[0,0,base.width,base.height], 'rotation':0}]
+        result = base.copy()
+        from print_studio.templates import piece_mask
+        for piece in pieces:
+            box = piece['box']; rotation = piece.get('rotation',0)
+            rotated = tile.rotate(rotation, expand=True) if rotation else tile
+            tile_width = max(1,round(options['tile_cm'] * factor * rotated.width / tile.width))
+            layer = repeat(rotated, (box[2]-box[0],box[3]-box[1]), tile_width,
+                           (round(options['offset_x_cm']*factor), round(options['offset_y_cm']*factor)))
+            region = piece_mask(mask,piece)
+            result.paste(layer, (box[0],box[1]), region)
+            layer.close(); region.close()
+            if rotation: rotated.close()
+        return result
     layer = repeat(tile, base.size, round(options['tile_cm'] * factor),
                    (round(options['offset_x_cm'] * factor), round(options['offset_y_cm'] * factor)))
-    if options.get('shade', True):
+    if options.get('shade', True) and spec.get('shade_mode','base') == 'base':
         luminance = ImageOps.grayscale(base).point(lambda x: max(75, x))
         layer = ImageChops.multiply(layer, Image.merge('RGB', (luminance,) * 3))
     return Image.composite(layer, base, mask)
@@ -181,10 +214,12 @@ def render(tile_path, output, options, templates=()):
     flat.close()
     for index, spec in enumerate(templates, 1):
         result = mockup(tile, spec, options)
-        save_png(result, output / f'套版效果_{index:02d}.png')
+        label = ('裁片_' if spec.get('kind') == 'cutting' else '套版效果_') + f'{index:02d}'
+        if spec.get('size'): label += '_' + ''.join(c for c in spec['size'] if c.isalnum())[:12]
+        save_png(result, output / (label+'.png'), spec.get('source_dpi'))
         result.close()
     report = {'settings': options, 'seams': seam_report(tile),
-              'templates': [s['name'] for s in templates],
+              'templates': [{'name':s['name'], 'kind':s.get('kind','mockup'), 'source_dpi':s.get('source_dpi'), 'size':s.get('size','')} for s in templates],
               'notice': '平面印花画布不包含工厂版型、放码、缝份或色彩校准；请审核花型并打样。'}
     atomic_json(output / '生成参数.json', report)
     return sorted(output.glob('*.png')) + [output / '生成参数.json']
