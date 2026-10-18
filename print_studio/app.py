@@ -33,8 +33,11 @@ class App:
         self.task_text = tk.StringVar(value='未加载任务')
         self.setup_style(); self.build(); root.after(100, self.poll)
         root.protocol('WM_DELETE_WINDOW', self.close)
-        demo = ASSETS / 'demo' / 'template.json'
-        if demo.exists(): self.templates = [demo]; self.refresh_templates()
+        if (ASSETS/'case67/catalog.json').exists():
+            self.load_builtin()
+        else:
+            demo = ASSETS / 'demo' / 'template.json'
+            if demo.exists(): self.templates = [demo]; self.refresh_templates()
 
     def setup_style(self):
         self.root.configure(bg='#edf3f6')
@@ -85,6 +88,7 @@ class App:
         row = ttk.Frame(source, style='Card.TFrame'); row.pack(fill='x', pady=(10, 0))
         ttk.Button(row, text='选择图片', command=self.add_files).pack(side='left')
         ttk.Button(row, text='导入文件夹', command=self.add_folder).pack(side='left', padx=5)
+        ttk.Button(source, text='加载自带测试花朵', command=self.load_builtin_pattern).pack(fill='x',pady=(6,0))
         ttk.Button(source, text='清空列表', command=self.clear_files).pack(fill='x', pady=(6, 0))
         params = self.card(controls, '02  满版循环参数')
         ttk.Label(params, text='首版模式：满版循环（碎花 / 几何 / 无缝图案）', style='Card.TLabel', wraplength=295).pack(anchor='w')
@@ -126,6 +130,9 @@ class App:
         ttk.Button(row, text='编辑选中蒙版', command=self.edit_template_mask).pack(side='left')
         ttk.Button(row, text='核对模板 / 裁片方向', command=self.review_template).pack(side='left',padx=5)
         self.template_list.bind('<Double-1>',lambda e:self.review_template())
+        row=ttk.Frame(templates_tab);row.pack(fill='x',pady=(0,10))
+        ttk.Button(row,text='加载系统套装67（5效果＋5尺码）',command=self.load_builtin).pack(side='left')
+        ttk.Button(row,text='导出分层底版 ORA',command=self.export_layered).pack(side='left',padx=6)
         ttk.Label(templates_tab, text='支持整件满版换花：效果图先绘制服装蒙版；白底裁片ZIP可生成蒙版草稿。\n逐尺码保留原尺寸/DPI和排版；每个模板核对后才能开始。已印花底图默认不继承旧字母和条纹明暗。', wraplength=680).pack(anchor='w')
         api_tab = ttk.Frame(tabs, padding=18); tabs.add(api_tab, text='API 花型还原')
         ttk.Label(api_tab, text='接入服务商的图像编辑接口', font=('', 15, 'bold')).pack(anchor='w')
@@ -267,12 +274,50 @@ class App:
         selected = self.template_list.curselection()
         if selected: self.templates.pop(selected[0]); self.refresh_templates()
 
+    def load_builtin(self):
+        if self.busy:return
+        try:
+            from print_studio.builtin import install,catalog
+            source=ASSETS/'case67'
+            destination=Path.home()/'Documents'/'飞凡印花模板'/'系统套装67_v03'
+            try:self.builtin_root=install(source,destination)
+            except OSError:
+                self.builtin_root=source
+                self.write('模板库暂不可写，使用内置只读模板；需要编辑时请复制模板到可写目录')
+            _,self.templates,_=catalog(self.builtin_root)
+            self.refresh_templates();self.vars['tile_cm'].set('35');self.vars['dpi'].set('110')
+            self.status.set('已加载系统套装67：5张无印花效果底版＋S/M/L/XL/2XL裁片；可加载自带花朵测试')
+        except Exception as error:messagebox.showerror('系统模板加载失败',str(error))
+
+    def load_builtin_pattern(self):
+        if self.busy:return
+        try:
+            from print_studio.builtin import catalog
+            root=getattr(self,'builtin_root',ASSETS/'case67')
+            _,_,pattern=catalog(root);self.set_files([pattern])
+            self.vars['tile_cm'].set('35');self.use_api.set(False)
+            self.write('已加载花朵测试图，本地套版不调用API、不收取出图费用')
+        except Exception as error:messagebox.showerror('花型加载失败',str(error))
+
+    def export_layered(self):
+        if self.busy:return
+        try:
+            path=self.selected_template();spec=template(path)
+            target=filedialog.asksaveasfilename(title='导出无印花底版和隐藏蒙版；Krita/GIMP可打开',initialfile=spec['name']+'.ora',defaultextension='.ora',filetypes=[('OpenRaster分层源文件','*.ora')])
+            if not target:return
+            if Path(target).resolve() in (spec['base'].resolve(),spec['mask'].resolve(),path.resolve()):raise ValueError('不能覆盖模板原文件')
+            from print_studio.layered import export_ora
+            export_ora(spec['base'],spec['mask'],target)
+            self.write('已导出可编辑底版：'+target)
+        except Exception as error:messagebox.showerror('分层导出失败',str(error))
+
     def selected_template(self):
         selected=self.template_list.curselection()
         if not selected:raise ValueError('请先选中一个套版模板')
         return Path(self.templates[selected[0]])
 
     def editable_template(self,path):
+        if path.resolve().is_relative_to(ASSETS.resolve()):raise ValueError('系统资源是只读底版，请加载到可写模板库后编辑')
         if self.task_path and path.resolve().is_relative_to((self.task_path.parent/'templates').resolve()):
             raise ValueError('任务快照用于断点续作，不在这里修改。请导入原模板库中的JSON，修改后新建任务。')
 

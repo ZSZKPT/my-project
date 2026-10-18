@@ -27,8 +27,9 @@ jobs:
         shell: pwsh
         run: |
           Copy-Item -Recurse print_studio/assets/demo dist/示例模板
+          Copy-Item -Recurse print_studio/assets/case67 dist/系统套装模板
           Copy-Item print_studio/README.md dist/使用说明.md
-          Compress-Archive -Path 'dist/飞凡印花设计.exe','dist/使用说明.md','dist/示例模板' -DestinationPath 'dist/FeifanPrintStudio-Windows.zip'
+          Compress-Archive -Path 'dist/飞凡印花设计.exe','dist/使用说明.md','dist/示例模板','dist/系统套装模板' -DestinationPath 'dist/FeifanPrintStudio-Windows.zip'
       - uses: actions/upload-artifact@v4
         with:
           name: FeifanPrintStudio-Windows

@@ -233,4 +233,55 @@ class WholeGarmentTests(unittest.TestCase):
             self.assertFalse((root/'outside.png').exists())
 
 
+class BuiltinCaseTests(unittest.TestCase):
+    def test_bundled_suite_has_clean_bases_matching_each_size(self):
+        from print_studio.builtin import catalog
+        from PIL import ImageChops
+        root=ASSETS.parent/'case67';info,paths,pattern=catalog(root)
+        self.assertEqual(len(paths),10);self.assertTrue(pattern.is_file())
+        expected={'S':(6842,4121),'M':(6843,4371),'L':(6866,4542),'XL':(6843,5002),'2XL':(6874,5156)}
+        cutting=[]
+        for path in paths:
+            spec=template(path)
+            if spec['kind']=='cutting':
+                base=load_image(spec['base']);self.assertEqual(base.size,expected[spec['size']]);self.assertEqual(spec['source_dpi'],[110,110])
+                with Image.open(spec['mask']) as image:mask=image.convert('L')
+                dirty=ImageChops.difference(base,Image.new('RGB',base.size,'white'))
+                dirty=Image.composite(dirty,Image.new('RGB',base.size,'black'),mask)
+                self.assertIsNone(dirty.getbbox(),'old artwork remains inside blank panel mask')
+                self.assertEqual(len(spec['pieces']),10);cutting.append(spec['size'])
+                base.close();mask.close();dirty.close()
+        self.assertEqual(set(cutting),set(expected))
+
+    def test_library_install_does_not_overwrite_user_edits(self):
+        from print_studio.builtin import install,catalog
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);source=root/'source';source.mkdir();(source/'template.json').write_text('{}')
+            (source/'pattern.png').write_bytes(png_bytes())
+            (source/'catalog.json').write_text(json.dumps({'bundle_id':'test','templates':['template.json'],'pattern':'pattern.png'}))
+            dest=install(source,root/'library');(dest/'my-edit.txt').write_text('keep')
+            (dest/'template.json').write_text('{"custom":true}')
+            install(source,dest)
+            self.assertEqual((dest/'my-edit.txt').read_text(),'keep');self.assertEqual(json.loads((dest/'template.json').read_text()),{'custom':True})
+
+    def test_openraster_has_editable_layers_and_valid_merged_image(self):
+        from print_studio.layered import export_ora
+        from zipfile import ZipFile
+        from xml.etree.ElementTree import fromstring
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);base=Image.new('RGB',(10,10),'white');base.save(root/'base.png')
+            mask=Image.new('L',(10,10),128);mask.save(root/'mask.png')
+            effect=Image.composite(Image.new('RGB',(10,10),'blue'),base,mask)
+            target=export_ora(root/'base.png',root/'mask.png',root/'layered.ora',effect)
+            with ZipFile(target) as z:
+                self.assertEqual(z.namelist()[0],'mimetype');self.assertEqual(z.read('mimetype'),b'image/openraster')
+                stack=fromstring(z.read('stack.xml'));self.assertEqual(len(stack.find('stack').findall('layer')),3)
+                self.assertEqual(load_image(root/'base.png').size,(int(stack.attrib['w']),int(stack.attrib['h'])))
+                with Image.open(io.BytesIO(z.read('data/pattern.png'))) as image:
+                    merged=Image.alpha_composite(base.convert('RGBA'),image.convert('RGBA')).convert('RGB')
+                    from PIL import ImageChops,ImageStat
+                    self.assertLessEqual(max(max(e) for e in ImageStat.Stat(ImageChops.difference(merged,effect)).extrema),1)
+                with Image.open(io.BytesIO(z.read('mergedimage.png'))) as image:self.assertEqual(image.convert('RGB').tobytes(),effect.tobytes())
+
+
 if __name__ == '__main__': unittest.main()

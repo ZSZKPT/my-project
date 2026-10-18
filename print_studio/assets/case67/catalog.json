@@ -1,0 +1,19 @@
+{
+  "bundle_id": "case67-v03",
+  "name": "运动短袖＋短裤套装67",
+  "templates": [
+    "mockups/前/template.json",
+    "mockups/前1/template.json",
+    "mockups/后/template.json",
+    "mockups/细节1/template.json",
+    "mockups/细节2/template.json",
+    "cutting/S/template.json",
+    "cutting/M/template.json",
+    "cutting/L/template.json",
+    "cutting/XL/template.json",
+    "cutting/2XL/template.json"
+  ],
+  "pattern": "floral.png",
+  "sample_tile_cm": 35,
+  "notice": "用户授权公开的系统案例。效果底版为AI清图和人工蒙版，不是原摄影PSD。裁片按原110DPI及像素尺寸生成，生产前仍需工厂确认实际尺寸、出血、轮廓、方向和对花。"
+}

@@ -1,0 +1,13 @@
+{
+  "name": "系统套装67 · 前1",
+  "mode": "full_repeat",
+  "kind": "mockup",
+  "base": "base.png",
+  "mask": "mask.png",
+  "canvas_width_cm": 140,
+  "shade_mode": "base",
+  "review_required": true,
+  "source_name": "YQ-TJDXTZ-67-前1.jpg",
+  "note": "AI清图后规范化至原图尺寸；人工区域蒙版。二维套版样例，不是原始摄影PSD，未做三维布料变形。",
+  "approval": "cea55560d20f3dea126c342e256aa7772e4bc6d99847bcbf6757e09c5161ee1c"
+}

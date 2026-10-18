@@ -14,6 +14,8 @@ def main():
         from print_studio.jobs import Job
         from print_studio.core import settings
         root.update()
+        assert len(app.templates)==10, 'built-in suite not loaded'
+        assert (app.builtin_root/'floral.png').is_file()
         with tempfile.TemporaryDirectory() as directory:
             options = settings({'width_cm': 10, 'height_cm': 12, 'tile_cm': 3, 'dpi': 72, 'offset_x_cm': 0, 'offset_y_cm': 0})
             job = Job.create([ASSETS / 'demo' / 'geometric.png'], directory, options, [ASSETS / 'demo' / 'template.json'])
