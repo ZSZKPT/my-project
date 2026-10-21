@@ -1,0 +1,82 @@
+{
+  "version": "0.4.0",
+  "local_batch": "done",
+  "fixtures": "synthetic technical drawings, not model photos",
+  "cases": [
+    {
+      "garment_type": "set_tee_shorts",
+      "regions": [
+        "top_body",
+        "top_left_sleeve",
+        "top_right_sleeve",
+        "shorts_left_leg",
+        "shorts_right_leg"
+      ],
+      "smart_object_mapping": [
+        "TOP_BODY_PRINT",
+        "TOP_LEFT_SLEEVE_PRINT",
+        "TOP_RIGHT_SLEEVE_PRINT",
+        "SHORTS_LEFT_PRINT",
+        "SHORTS_RIGHT_PRINT"
+      ],
+      "native_photoshop": "UNVERIFIED",
+      "real_photo_masks": "UNVERIFIED"
+    },
+    {
+      "garment_type": "set_long_pants",
+      "regions": [
+        "top_body",
+        "top_left_sleeve",
+        "top_right_sleeve",
+        "pants_left_leg",
+        "pants_right_leg"
+      ],
+      "smart_object_mapping": [
+        "TOP_BODY_PRINT",
+        "TOP_LEFT_SLEEVE_PRINT",
+        "TOP_RIGHT_SLEEVE_PRINT",
+        "PANTS_LEFT_PRINT",
+        "PANTS_RIGHT_PRINT"
+      ],
+      "native_photoshop": "UNVERIFIED",
+      "real_photo_masks": "UNVERIFIED"
+    },
+    {
+      "garment_type": "dress_long",
+      "regions": [
+        "bodice",
+        "skirt",
+        "sleeves"
+      ],
+      "smart_object_mapping": [
+        "DRESS_BODICE_PRINT",
+        "DRESS_SKIRT_PRINT",
+        "DRESS_SLEEVES_PRINT"
+      ],
+      "native_photoshop": "UNVERIFIED",
+      "real_photo_masks": "UNVERIFIED"
+    }
+  ],
+  "ai_api_live": "UNVERIFIED (no credentials)",
+  "production_fold_and_perspective": "UNVERIFIED",
+  "outputs": [
+    {
+      "file": "technical-outputs/set_tee_shorts_main.jpg",
+      "sha256": "2b97495aec27851421580489c9c95e3742de41ea1f3384700f0d9ff329bf856f"
+    },
+    {
+      "file": "technical-outputs/set_long_pants_main.jpg",
+      "sha256": "1a1234e82c0d62e67022ee1fcedad956057c6b96f989c10b787a8f7c1aa94482"
+    },
+    {
+      "file": "technical-outputs/dress_long_main.jpg",
+      "sha256": "2f12c09390b5295aefc50e4f51c1c1a4b1bc477ab392bbe1b8fb6015d168a994"
+    }
+  ],
+  "automated_tests": {
+    "legacy": 20,
+    "fashion": 16,
+    "result": "passed"
+  },
+  "gui_smoke": "passed on Linux; Windows result in build report"
+}
