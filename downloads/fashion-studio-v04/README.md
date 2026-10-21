@@ -8,6 +8,7 @@
 - [使用说明](../../print_studio/FASHION_STUDIO.md)
 - [逐项验收记录](../../print_studio/FASHION_ACCEPTANCE.md)
 - [技术测试模板与结果 ZIP](https://github.com/ZSZKPT/my-project/raw/refs/heads/main/downloads/fashion-studio-v04/technical-examples.zip)
+- [界面预览（技术图示例）](workspace.png)
 - [技术检查图](technical-proof.png)
 - [机器可读测试报告](acceptance-report.json)
 
