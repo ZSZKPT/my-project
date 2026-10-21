@@ -6,8 +6,9 @@ from print_studio.core import load_image, save_png
 
 
 class MaskEditor:
-    def __init__(self, root, base_path, mask_path, on_save=None):
+    def __init__(self, root, base_path, mask_path, on_save=None, allow_empty=False, caption=None):
         self.base = load_image(base_path); self.path = mask_path; self.on_save = on_save
+        self.allow_empty = allow_empty
         with Image.open(mask_path) as image: self.mask = image.convert('L')
         if self.mask.size != self.base.size: raise ValueError('蒙版与底图尺寸不一致')
         self.window = tk.Toplevel(root); self.window.title('全分辨率蒙版编辑 · 红色为印花区域'); self.window.geometry(f'{min(1050,max(900,root.winfo_screenwidth()-60))}x{min(800,max(650,root.winfo_screenheight()-90))}')
@@ -30,7 +31,7 @@ class MaskEditor:
         self.canvas.grid(row=0,column=0,sticky='nsew'); ys.grid(row=0,column=1,sticky='ns'); xs.grid(row=1,column=0,sticky='ew')
         frame.columnconfigure(0,weight=1); frame.rowconfigure(0,weight=1)
         self.info = tk.StringVar(); ttk.Label(self.window,textvariable=self.info,padding=8).pack(anchor='w')
-        ttk.Label(self.window,text='涂满上衣、袖子及短裤；避开皮肤、头发、挂架、轮廓线和生产标记。编辑不会缩小蒙版。',padding=(8,0,8,8)).pack(anchor='w')
+        ttk.Label(self.window,text=caption or '涂出当前可印花部件；避开皮肤、头发、挂架、轮廓线和生产标记。编辑不会缩小蒙版。',padding=(8,0,8,8)).pack(anchor='w')
         self.canvas.bind('<Configure>',lambda e:self.schedule())
         self.canvas.bind('<Button-1>',self.press); self.canvas.bind('<B1-Motion>',self.paint); self.canvas.bind('<ButtonRelease-1>',self.release)
         self.canvas.bind('<MouseWheel>',self.wheel); self.canvas.bind('<Button-4>',lambda e:self.scroll('y','scroll',-3,'units')); self.canvas.bind('<Button-5>',lambda e:self.scroll('y','scroll',3,'units'))
@@ -94,7 +95,7 @@ class MaskEditor:
 
     def save(self):
         self.release()
-        if not self.mask.getbbox():return messagebox.showinfo('蒙版为空','请先涂抹印花区域',parent=self.window)
+        if not self.mask.getbbox() and not self.allow_empty:return messagebox.showinfo('蒙版为空','请先涂抹印花区域',parent=self.window)
         try:
             save_png(self.mask,self.path)
             if self.on_save:self.on_save()

@@ -126,6 +126,7 @@ class FashionTests(unittest.TestCase):
 
     def test_zip_and_paths_cannot_escape_library(self):
         for entry in ['../escape','/tmp/escape','C:/escape','folder\\escape']:
+            with self.assertRaises(ValueError):local(self.lib.root,entry)
             z=self.root/'bad.zip'
             with ZipFile(z,'w') as archive:archive.writestr(entry,b'bad')
             with self.assertRaises(ValueError):self.lib.import_zip(z)

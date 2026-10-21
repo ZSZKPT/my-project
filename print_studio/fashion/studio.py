@@ -217,9 +217,10 @@ class FashionApp:
         if messagebox.askyesno('确认已检查蒙版','是否已逐部件检查边缘、头发/皮肤遮挡、旧图案、光影与分区顺序？'):
             approve(p);self.refresh_templates();self.status.set('模板已核对。任何底图、蒙版或参数修改后都需要重新核对。')
 
-    def editor(self,p,s,mask):
+    def editor(self,p,s,mask,occlusion=False):
         if self.mask_editor and self.mask_editor.window.winfo_exists():self.mask_editor.close()
-        self.mask_editor=MaskEditor(self.root,local(p.parent,s.base),local(p.parent,mask),on_save=lambda:self.refresh_templates())
+        self.mask_editor=MaskEditor(self.root,local(p.parent,s.base),local(p.parent,mask),on_save=lambda:self.refresh_templates(),allow_empty=occlusion,
+                                    caption='涂出需要保护的头发、皮肤、饰品等前景。没有遮挡时允许保存空蒙版。' if occlusion else None)
 
     def edit_region(self):
         p,s,r=self.selected_region();self.editor(p,s,r['mask'])
@@ -233,7 +234,7 @@ class FashionApp:
         self.refresh_templates()
 
     def edit_occlusion(self):
-        p,s=self.selected();self.editor(p,s,s.occlusion['mask'])
+        p,s=self.selected();self.editor(p,s,s.occlusion['mask'],occlusion=True)
 
     def edit_regions(self):
         p,s=self.selected()

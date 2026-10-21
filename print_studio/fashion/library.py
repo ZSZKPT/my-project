@@ -154,6 +154,8 @@ class TemplateLibrary:
                     if info.is_dir(): dest.mkdir(parents=True, exist_ok=True); continue
                     dest.parent.mkdir(parents=True, exist_ok=True)
                     with z.open(info) as src, dest.open('xb') as dst: shutil.copyfileobj(src, dst)
+            if not (folder/'mockup.json').is_file():
+                raise ValueError('模板包根目录缺少 mockup.json，请选择完整的多版型模板包')
             s = validate(folder/'mockup.json')
             dest = self.root/('tpl_'+uuid.uuid4().hex); dest.mkdir()
             # Copy only manifest-referenced assets; never import executable payloads.
