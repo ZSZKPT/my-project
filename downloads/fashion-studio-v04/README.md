@@ -2,7 +2,7 @@
 
 版型、模特模板与印花分离；本地多部件套图和批量 JPG 可运行，**不是全部 V1–V3 验收完成版**。
 
-- [下载 Windows EXE 包（构建与桌面自检通过后发布）](https://github.com/ZSZKPT/my-project/raw/refs/heads/main/downloads/FeifanPrintStudio-v0.4-Windows.zip)
+- [下载 Windows EXE 包（已通过测试与程序自检）](https://github.com/ZSZKPT/my-project/raw/refs/heads/main/downloads/FeifanPrintStudio-v0.4-Windows.zip)
 - [Windows构建记录与校验值](../FeifanPrintStudio-v0.4-build.json)
 - [下载 Python 源码包](https://github.com/ZSZKPT/my-project/raw/refs/heads/main/downloads/FeifanPrintStudio-v0.4-Source.zip)
 - [使用说明](../../print_studio/FASHION_STUDIO.md)
@@ -17,3 +17,5 @@ Windows 包解压后运行“飞凡印花设计.exe”。本地 JPG 模式无需
 23 个服装版型预设和三类**技术绘图**示例已包含在包中。技术示例不是实际商品照片，不能拿来证明发丝边缘识别、真实褶皱或 Photoshop 智能对象通过验收。导入技术模板ZIP后核对批准，再导入示例印花即可试用。
 
 Photoshop 当前未安装，原生 PSD 创建/编辑/重开等待目标 Photoshop 实测。AI 视觉接口可配置，但没有真实API凭据实测；当前多边形建议不是像素级自动分割。详细边界见验收记录，不声称全自动商业生产已完成。
+
+Windows 构建、36项自动测试、打包后EXE预览/蒙版编辑/本地导出自检均已通过：[构建记录](https://github.com/ZSZKPT/my-project/actions/runs/39573450676)。公开ZIP已完整下载并核对SHA256及解压CRC。Photoshop与真实AI的未验收状态不变。

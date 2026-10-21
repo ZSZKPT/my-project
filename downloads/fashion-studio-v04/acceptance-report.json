@@ -78,5 +78,12 @@
     "fashion": 16,
     "result": "passed"
   },
-  "gui_smoke": "passed on Linux; Windows result in build report"
+  "gui_smoke": "passed on Linux; Windows result in build report",
+  "windows_tests": {
+    "legacy": 20,
+    "fashion": 16,
+    "result": "passed"
+  },
+  "windows_exe_smoke": "passed",
+  "build_run": "https://github.com/ZSZKPT/my-project/actions/runs/39573450676"
 }
