@@ -16,7 +16,18 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install -r print_studio/requirements.txt
       - run: python -m unittest discover -s tests -p test_print_studio.py -v
-      - run: python -m unittest discover -s tests -p test_fashion_studio.py -v
+      - name: Run multi-garment tests with reviewable failure summary
+        shell: pwsh
+        run: |
+          python -m unittest discover -s tests -p test_fashion_studio.py -v 2>&1 | Tee-Object -FilePath fashion-tests.log
+          $result = $LASTEXITCODE
+          if ($result -ne 0) {
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value '# Multi-garment test failure'
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value '```text'
+            Get-Content fashion-tests.log | Add-Content -Path $env:GITHUB_STEP_SUMMARY
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value '```'
+          }
+          exit $result
       - run: python -m PyInstaller --noconfirm --clean --onefile --windowed --name "飞凡印花设计" --paths . --add-data "print_studio/assets;assets" print_studio/main.py
       - name: Smoke test desktop application
         shell: pwsh
