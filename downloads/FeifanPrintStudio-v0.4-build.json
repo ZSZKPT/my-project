@@ -1,0 +1,8 @@
+{
+  "version": "0.4.0",
+  "source_commit": "e509689f809e8de222d3a99394c618059b348df4",
+  "build_run": "https://github.com/ZSZKPT/my-project/actions/runs/39573450676",
+  "sha256": "78b6b0765c3e1fdca3fdf6232da3df0af55a9c470e5604f1b5d8e6fd4b8dcf52",
+  "bytes": 62101733,
+  "photoshop": "UNVERIFIED - not installed in CI"
+}
