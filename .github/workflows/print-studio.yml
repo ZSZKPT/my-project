@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['print_studio/**', 'tests/test_print_studio.py', '.github/workflows/print-studio.yml']
+    paths: ['print_studio/**', 'tests/test_print_studio.py', 'tests/test_fashion_studio.py', '.github/workflows/print-studio.yml']
 permissions:
   contents: read
 jobs:
@@ -16,20 +16,24 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install -r print_studio/requirements.txt
       - run: python -m unittest discover -s tests -p test_print_studio.py -v
+      - run: python -m unittest discover -s tests -p test_fashion_studio.py -v
       - run: python -m PyInstaller --noconfirm --clean --onefile --windowed --name "飞凡印花设计" --paths . --add-data "print_studio/assets;assets" print_studio/main.py
       - name: Smoke test desktop application
         shell: pwsh
         run: |
           $process = Start-Process -FilePath 'dist/飞凡印花设计.exe' -ArgumentList '--self-test' -PassThru
-          if (-not $process.WaitForExit(90000)) { $process.Kill(); throw 'Print Studio startup test timed out.' }
+          if (-not $process.WaitForExit(180000)) { $process.Kill(); throw 'Print Studio startup test timed out.' }
           if ($process.ExitCode -ne 0) { throw 'Print Studio startup test failed.' }
       - name: Package application and examples
         shell: pwsh
         run: |
           Copy-Item -Recurse print_studio/assets/demo dist/示例模板
           Copy-Item -Recurse print_studio/assets/case67 dist/系统套装模板
+          Copy-Item -Recurse print_studio/assets/fashion dist/版型配置与技术示例
           Copy-Item print_studio/README.md dist/使用说明.md
-          Compress-Archive -Path 'dist/飞凡印花设计.exe','dist/使用说明.md','dist/示例模板','dist/系统套装模板' -DestinationPath 'dist/FeifanPrintStudio-Windows.zip'
+          Copy-Item print_studio/FASHION_STUDIO.md dist/FASHION_STUDIO.md
+          Copy-Item print_studio/FASHION_ACCEPTANCE.md dist/FASHION_ACCEPTANCE.md
+          Compress-Archive -Path 'dist/飞凡印花设计.exe','dist/使用说明.md','dist/FASHION_STUDIO.md','dist/FASHION_ACCEPTANCE.md','dist/示例模板','dist/系统套装模板','dist/版型配置与技术示例' -DestinationPath 'dist/FeifanPrintStudio-Windows.zip'
       - uses: actions/upload-artifact@v4
         with:
           name: FeifanPrintStudio-Windows

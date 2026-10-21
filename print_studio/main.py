@@ -6,6 +6,9 @@ if __package__ in (None, ''):
 
 def main():
     import tkinter as tk
+    if '--legacy' not in sys.argv and '--self-test' not in sys.argv:
+        from print_studio.fashion.studio import FashionApp
+        root = tk.Tk(); FashionApp(root); root.mainloop(); return
     from print_studio.app import App
     root = tk.Tk(); app = App(root)
     if '--self-test' in sys.argv:
@@ -43,7 +46,11 @@ def main():
             cut_job=Job.create([ASSETS/'demo'/'geometric.png'],directory,options,paths);cut_job.run()
             assert any(p.name.startswith('裁片_') for p in (cut_job.root/cut_job.state['items'][0]['id']).glob('*.png'))
 
-        root.destroy(); return
+        for token in root.tk.call('after','info'): root.after_cancel(token)
+        root.destroy()
+        from print_studio.fashion.cli import gui_smoke
+        gui_smoke()
+        return
     root.mainloop()
 
 

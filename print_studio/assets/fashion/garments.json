@@ -1,0 +1,496 @@
+{
+  "schema_version": 1,
+  "types": [
+    {
+      "id": "tee_short",
+      "category": "T恤",
+      "name": "短袖T恤",
+      "parts": [
+        {
+          "id": "body",
+          "name": "衣身",
+          "smart_object": "TOP_BODY_PRINT"
+        },
+        {
+          "id": "left_sleeve",
+          "name": "左袖",
+          "smart_object": "TOP_LEFT_SLEEVE_PRINT"
+        },
+        {
+          "id": "right_sleeve",
+          "name": "右袖",
+          "smart_object": "TOP_RIGHT_SLEEVE_PRINT"
+        }
+      ]
+    },
+    {
+      "id": "tee_long",
+      "category": "T恤",
+      "name": "长袖T恤",
+      "parts": [
+        {
+          "id": "body",
+          "name": "衣身",
+          "smart_object": "TOP_BODY_PRINT"
+        },
+        {
+          "id": "left_sleeve",
+          "name": "左袖",
+          "smart_object": "TOP_LEFT_SLEEVE_PRINT"
+        },
+        {
+          "id": "right_sleeve",
+          "name": "右袖",
+          "smart_object": "TOP_RIGHT_SLEEVE_PRINT"
+        }
+      ]
+    },
+    {
+      "id": "tee_crop",
+      "category": "T恤",
+      "name": "短款T恤",
+      "parts": [
+        {
+          "id": "body",
+          "name": "衣身",
+          "smart_object": "TOP_BODY_PRINT"
+        },
+        {
+          "id": "left_sleeve",
+          "name": "左袖",
+          "smart_object": "TOP_LEFT_SLEEVE_PRINT"
+        },
+        {
+          "id": "right_sleeve",
+          "name": "右袖",
+          "smart_object": "TOP_RIGHT_SLEEVE_PRINT"
+        }
+      ]
+    },
+    {
+      "id": "tee_loose",
+      "category": "T恤",
+      "name": "宽松T恤",
+      "parts": [
+        {
+          "id": "body",
+          "name": "衣身",
+          "smart_object": "TOP_BODY_PRINT"
+        },
+        {
+          "id": "left_sleeve",
+          "name": "左袖",
+          "smart_object": "TOP_LEFT_SLEEVE_PRINT"
+        },
+        {
+          "id": "right_sleeve",
+          "name": "右袖",
+          "smart_object": "TOP_RIGHT_SLEEVE_PRINT"
+        }
+      ]
+    },
+    {
+      "id": "tee_fitted",
+      "category": "T恤",
+      "name": "修身T恤",
+      "parts": [
+        {
+          "id": "body",
+          "name": "衣身",
+          "smart_object": "TOP_BODY_PRINT"
+        },
+        {
+          "id": "left_sleeve",
+          "name": "左袖",
+          "smart_object": "TOP_LEFT_SLEEVE_PRINT"
+        },
+        {
+          "id": "right_sleeve",
+          "name": "右袖",
+          "smart_object": "TOP_RIGHT_SLEEVE_PRINT"
+        }
+      ]
+    },
+    {
+      "id": "shorts_sport",
+      "category": "短裤",
+      "name": "运动短裤",
+      "parts": [
+        {
+          "id": "left_leg",
+          "name": "左裤片",
+          "smart_object": "SHORTS_LEFT_PRINT"
+        },
+        {
+          "id": "right_leg",
+          "name": "右裤片",
+          "smart_object": "SHORTS_RIGHT_PRINT"
+        }
+      ]
+    },
+    {
+      "id": "shorts_casual",
+      "category": "短裤",
+      "name": "休闲短裤",
+      "parts": [
+        {
+          "id": "left_leg",
+          "name": "左裤片",
+          "smart_object": "SHORTS_LEFT_PRINT"
+        },
+        {
+          "id": "right_leg",
+          "name": "右裤片",
+          "smart_object": "SHORTS_RIGHT_PRINT"
+        }
+      ]
+    },
+    {
+      "id": "shorts_tight",
+      "category": "短裤",
+      "name": "紧身短裤",
+      "parts": [
+        {
+          "id": "left_leg",
+          "name": "左裤片",
+          "smart_object": "SHORTS_LEFT_PRINT"
+        },
+        {
+          "id": "right_leg",
+          "name": "右裤片",
+          "smart_object": "SHORTS_RIGHT_PRINT"
+        }
+      ]
+    },
+    {
+      "id": "pants_sport",
+      "category": "长裤",
+      "name": "运动长裤",
+      "parts": [
+        {
+          "id": "left_leg",
+          "name": "左裤腿",
+          "smart_object": "PANTS_LEFT_PRINT"
+        },
+        {
+          "id": "right_leg",
+          "name": "右裤腿",
+          "smart_object": "PANTS_RIGHT_PRINT"
+        }
+      ]
+    },
+    {
+      "id": "pants_casual",
+      "category": "长裤",
+      "name": "休闲长裤",
+      "parts": [
+        {
+          "id": "left_leg",
+          "name": "左裤腿",
+          "smart_object": "PANTS_LEFT_PRINT"
+        },
+        {
+          "id": "right_leg",
+          "name": "右裤腿",
+          "smart_object": "PANTS_RIGHT_PRINT"
+        }
+      ]
+    },
+    {
+      "id": "pants_wide",
+      "category": "长裤",
+      "name": "阔腿裤",
+      "parts": [
+        {
+          "id": "left_leg",
+          "name": "左裤腿",
+          "smart_object": "PANTS_LEFT_PRINT"
+        },
+        {
+          "id": "right_leg",
+          "name": "右裤腿",
+          "smart_object": "PANTS_RIGHT_PRINT"
+        }
+      ]
+    },
+    {
+      "id": "dress_short",
+      "category": "连衣裙",
+      "name": "短款连衣裙",
+      "parts": [
+        {
+          "id": "bodice",
+          "name": "裙上身",
+          "smart_object": "DRESS_BODICE_PRINT"
+        },
+        {
+          "id": "skirt",
+          "name": "裙摆",
+          "smart_object": "DRESS_SKIRT_PRINT"
+        },
+        {
+          "id": "sleeves",
+          "name": "裙袖（无袖可删除）",
+          "smart_object": "DRESS_SLEEVES_PRINT"
+        }
+      ]
+    },
+    {
+      "id": "dress_long",
+      "category": "连衣裙",
+      "name": "长款连衣裙",
+      "parts": [
+        {
+          "id": "bodice",
+          "name": "裙上身",
+          "smart_object": "DRESS_BODICE_PRINT"
+        },
+        {
+          "id": "skirt",
+          "name": "裙摆",
+          "smart_object": "DRESS_SKIRT_PRINT"
+        },
+        {
+          "id": "sleeves",
+          "name": "裙袖（无袖可删除）",
+          "smart_object": "DRESS_SLEEVES_PRINT"
+        }
+      ]
+    },
+    {
+      "id": "dress_fitted",
+      "category": "连衣裙",
+      "name": "修身连衣裙",
+      "parts": [
+        {
+          "id": "bodice",
+          "name": "裙上身",
+          "smart_object": "DRESS_BODICE_PRINT"
+        },
+        {
+          "id": "skirt",
+          "name": "裙摆",
+          "smart_object": "DRESS_SKIRT_PRINT"
+        },
+        {
+          "id": "sleeves",
+          "name": "裙袖（无袖可删除）",
+          "smart_object": "DRESS_SLEEVES_PRINT"
+        }
+      ]
+    },
+    {
+      "id": "dress_loose",
+      "category": "连衣裙",
+      "name": "宽松连衣裙",
+      "parts": [
+        {
+          "id": "bodice",
+          "name": "裙上身",
+          "smart_object": "DRESS_BODICE_PRINT"
+        },
+        {
+          "id": "skirt",
+          "name": "裙摆",
+          "smart_object": "DRESS_SKIRT_PRINT"
+        },
+        {
+          "id": "sleeves",
+          "name": "裙袖（无袖可删除）",
+          "smart_object": "DRESS_SLEEVES_PRINT"
+        }
+      ]
+    },
+    {
+      "id": "set_tee_shorts",
+      "category": "两件套",
+      "name": "短袖＋短裤",
+      "parts": [
+        {
+          "id": "top_body",
+          "name": "衣身",
+          "smart_object": "TOP_BODY_PRINT"
+        },
+        {
+          "id": "top_left_sleeve",
+          "name": "左袖",
+          "smart_object": "TOP_LEFT_SLEEVE_PRINT"
+        },
+        {
+          "id": "top_right_sleeve",
+          "name": "右袖",
+          "smart_object": "TOP_RIGHT_SLEEVE_PRINT"
+        },
+        {
+          "id": "shorts_left_leg",
+          "name": "左裤片",
+          "smart_object": "SHORTS_LEFT_PRINT"
+        },
+        {
+          "id": "shorts_right_leg",
+          "name": "右裤片",
+          "smart_object": "SHORTS_RIGHT_PRINT"
+        }
+      ]
+    },
+    {
+      "id": "set_tee_pants",
+      "category": "两件套",
+      "name": "短袖＋长裤",
+      "parts": [
+        {
+          "id": "top_body",
+          "name": "衣身",
+          "smart_object": "TOP_BODY_PRINT"
+        },
+        {
+          "id": "top_left_sleeve",
+          "name": "左袖",
+          "smart_object": "TOP_LEFT_SLEEVE_PRINT"
+        },
+        {
+          "id": "top_right_sleeve",
+          "name": "右袖",
+          "smart_object": "TOP_RIGHT_SLEEVE_PRINT"
+        },
+        {
+          "id": "pants_left_leg",
+          "name": "左裤腿",
+          "smart_object": "PANTS_LEFT_PRINT"
+        },
+        {
+          "id": "pants_right_leg",
+          "name": "右裤腿",
+          "smart_object": "PANTS_RIGHT_PRINT"
+        }
+      ]
+    },
+    {
+      "id": "set_long_pants",
+      "category": "两件套",
+      "name": "长袖＋长裤",
+      "parts": [
+        {
+          "id": "top_body",
+          "name": "衣身",
+          "smart_object": "TOP_BODY_PRINT"
+        },
+        {
+          "id": "top_left_sleeve",
+          "name": "左袖",
+          "smart_object": "TOP_LEFT_SLEEVE_PRINT"
+        },
+        {
+          "id": "top_right_sleeve",
+          "name": "右袖",
+          "smart_object": "TOP_RIGHT_SLEEVE_PRINT"
+        },
+        {
+          "id": "pants_left_leg",
+          "name": "左裤腿",
+          "smart_object": "PANTS_LEFT_PRINT"
+        },
+        {
+          "id": "pants_right_leg",
+          "name": "右裤腿",
+          "smart_object": "PANTS_RIGHT_PRINT"
+        }
+      ]
+    },
+    {
+      "id": "set_tank_shorts",
+      "category": "两件套",
+      "name": "背心＋短裤",
+      "parts": [
+        {
+          "id": "top_body",
+          "name": "背心衣身",
+          "smart_object": "TANK_BODY_PRINT"
+        },
+        {
+          "id": "shorts_left_leg",
+          "name": "左裤片",
+          "smart_object": "SHORTS_LEFT_PRINT"
+        },
+        {
+          "id": "shorts_right_leg",
+          "name": "右裤片",
+          "smart_object": "SHORTS_RIGHT_PRINT"
+        }
+      ]
+    },
+    {
+      "id": "sweat_pullover",
+      "category": "卫衣",
+      "name": "套头卫衣",
+      "parts": [
+        {
+          "id": "body",
+          "name": "衣身",
+          "smart_object": "TOP_BODY_PRINT"
+        },
+        {
+          "id": "left_sleeve",
+          "name": "左袖",
+          "smart_object": "TOP_LEFT_SLEEVE_PRINT"
+        },
+        {
+          "id": "right_sleeve",
+          "name": "右袖",
+          "smart_object": "TOP_RIGHT_SLEEVE_PRINT"
+        }
+      ]
+    },
+    {
+      "id": "sweat_hoodie",
+      "category": "卫衣",
+      "name": "连帽卫衣",
+      "parts": [
+        {
+          "id": "body",
+          "name": "衣身",
+          "smart_object": "SWEAT_BODY_PRINT"
+        },
+        {
+          "id": "left_sleeve",
+          "name": "左袖",
+          "smart_object": "SWEAT_LEFT_SLEEVE_PRINT"
+        },
+        {
+          "id": "right_sleeve",
+          "name": "右袖",
+          "smart_object": "SWEAT_RIGHT_SLEEVE_PRINT"
+        },
+        {
+          "id": "hood",
+          "name": "帽子",
+          "smart_object": "HOOD_PRINT"
+        }
+      ]
+    },
+    {
+      "id": "tank_cami",
+      "category": "背心",
+      "name": "吊带背心",
+      "parts": [
+        {
+          "id": "body",
+          "name": "背心衣身",
+          "smart_object": "TANK_BODY_PRINT"
+        }
+      ]
+    },
+    {
+      "id": "tank_sport",
+      "category": "背心",
+      "name": "运动背心",
+      "parts": [
+        {
+          "id": "body",
+          "name": "背心衣身",
+          "smart_object": "TANK_BODY_PRINT"
+        }
+      ]
+    }
+  ]
+}
