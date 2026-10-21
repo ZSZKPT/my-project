@@ -1,0 +1,45 @@
+test_ai_polygon_drafts_not_cross_applied_and_no_auto_retry (test_fashion_studio.FashionTests.test_ai_polygon_drafts_not_cross_applied_and_no_auto_retry) ... ok
+test_approval_invalidates_after_mask_edit (test_fashion_studio.FashionTests.test_approval_invalidates_after_mask_edit) ... ok
+test_batch_snapshots_pause_resume_and_completed_skip (test_fashion_studio.FashionTests.test_batch_snapshots_pause_resume_and_completed_skip) ... ok
+test_cancel_and_corrupt_snapshot_detection (test_fashion_studio.FashionTests.test_cancel_and_corrupt_snapshot_detection) ... ok
+test_config_extension_does_not_change_engine (test_fashion_studio.FashionTests.test_config_extension_does_not_change_engine) ... ok
+test_csv_excel_and_folder_sku_import (test_fashion_studio.FashionTests.test_csv_excel_and_folder_sku_import) ... ok
+test_each_model_starts_with_own_empty_masks (test_fashion_studio.FashionTests.test_each_model_starts_with_own_empty_masks) ... ok
+test_existing_unknown_output_is_never_overwritten (test_fashion_studio.FashionTests.test_existing_unknown_output_is_never_overwritten) ... ok
+test_failed_retry_does_not_repeat_completed_jobs (test_fashion_studio.FashionTests.test_failed_retry_does_not_repeat_completed_jobs) ... ok
+test_independent_assignment_shared_source_and_transform_isolation (test_fashion_studio.FashionTests.test_independent_assignment_shared_source_and_transform_isolation) ... ok
+test_library_export_import_duplicate_search_delete (test_fashion_studio.FashionTests.test_library_export_import_duplicate_search_delete) ... ok
+test_modes_counts_and_case_insensitive_name_conflicts (test_fashion_studio.FashionTests.test_modes_counts_and_case_insensitive_name_conflicts) ... ok
+test_perspective_identity_and_invalid_quad (test_fashion_studio.FashionTests.test_perspective_identity_and_invalid_quad) ... ok
+test_photoshop_package_is_not_marked_verified (test_fashion_studio.FashionTests.test_photoshop_package_is_not_marked_verified) ... ok
+test_three_garments_have_distinct_masks_and_structures (test_fashion_studio.FashionTests.test_three_garments_have_distinct_masks_and_structures) ... ok
+test_zip_and_paths_cannot_escape_library (test_fashion_studio.FashionTests.test_zip_and_paths_cannot_escape_library) ... ERROR
+
+======================================================================
+ERROR: test_zip_and_paths_cannot_escape_library (test_fashion_studio.FashionTests.test_zip_and_paths_cannot_escape_library)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\a\my-project\my-project\tests\test_fashion_studio.py", line 131, in test_zip_and_paths_cannot_escape_library
+    with self.assertRaises(ValueError):self.lib.import_zip(z)
+                                       ^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\a\my-project\my-project\print_studio\fashion\library.py", line 157, in import_zip
+    s = validate(folder/'mockup.json')
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\a\my-project\my-project\print_studio\fashion\library.py", line 43, in validate
+    s = MockupTemplate.read(path); root = Path(path).parent
+        ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\a\my-project\my-project\print_studio\fashion\models.py", line 112, in read
+    d = json.loads(Path(path).read_text(encoding='utf-8'))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\hostedtoolcache\windows\Python\3.12.10\x64\Lib\pathlib.py", line 1027, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\hostedtoolcache\windows\Python\3.12.10\x64\Lib\pathlib.py", line 1013, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tmppq8d2lst\\fixture\\templates\\tmps02ug85m\\mockup.json'
+
+----------------------------------------------------------------------
+Ran 16 tests in 7.060s
+
+FAILED (errors=1)
